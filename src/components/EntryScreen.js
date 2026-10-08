@@ -31,54 +31,19 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
             <BrandMark size={42} />
             <span>G배움로그</span>
           </div>
-          <span className={styles.headerNote}>교사를 위한 배움의 기록 공간</span>
+          <span className={styles.headerNote}>교사를 위한 수업 기록 도구</span>
         </header>
 
         <div className={styles.layout}>
           <section className={styles.story} aria-labelledby="hero-title">
-            <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> 함께 쌓이는 배움의 기록</div>
+            <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> G배움로그를 소개합니다</div>
             <h1 id="hero-title" className={styles.headline}>
-              수업의 순간을 모아,<br />
-              <span>성장의 흐름을 보다.</span>
+              과제부터 피드백까지,<br />
+              <span>배움의 흐름을 한눈에.</span>
             </h1>
             <p className={styles.description}>
-              과제를 나누고, 학생의 활동을 살피고,<br className={styles.desktopBreak} />
-              필요한 피드백을 한곳에 남겨 보세요.
+              구글 슬라이드 과제를 학생별로 나누고, 활동을 확인하며 피드백을 남기는 선생님용 대시보드입니다.
             </p>
-
-            <div className={styles.featureRow} aria-label="주요 기능">
-              <span>과제 배부</span>
-              <span className={styles.featureDot} />
-              <span>실시간 관찰</span>
-              <span className={styles.featureDot} />
-              <span>피드백 기록</span>
-            </div>
-
-            <div className={styles.sample} aria-hidden="true">
-              <div className={styles.sampleTop}>
-                <div>
-                  <span className={styles.sampleOverline}>오늘의 수업</span>
-                  <strong>우리 반의 배움이 이어지고 있어요</strong>
-                </div>
-                <span className={styles.liveBadge}><span /> 진행 중</span>
-              </div>
-              <div className={styles.sampleDivider} />
-              <div className={styles.sampleRow}>
-                <span className={styles.sampleIcon}>01</span>
-                <div><strong>과제 나누기</strong><small>학생에게 활동 자료 전달</small></div>
-                <span className={styles.sampleDone}>완료</span>
-              </div>
-              <div className={styles.sampleRow}>
-                <span className={styles.sampleIcon}>02</span>
-                <div><strong>배움 살펴보기</strong><small>활동 상황을 한눈에 확인</small></div>
-                <span className={styles.sampleProgress}>진행 중</span>
-              </div>
-              <div className={styles.sampleRow}>
-                <span className={styles.sampleIcon}>03</span>
-                <div><strong>피드백 남기기</strong><small>다음 배움을 위한 기록</small></div>
-                <span className={styles.sampleNext}>다음 단계</span>
-              </div>
-            </div>
           </section>
 
           <section className={styles.signInCard} aria-labelledby="sign-in-title">
@@ -100,12 +65,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
             </button>
 
             <div className={styles.supported}>
-              <span className={styles.supportedLabel}>함께 사용하는 도구</span>
-              <div className={styles.supportedApps}>
-                <span>Drive</span><span className={styles.separator} />
-                <span>Sheets</span><span className={styles.separator} />
-                <span>Slides</span>
-              </div>
+              Google Drive · Sheets · Slides와 연결됩니다.
             </div>
 
             <div className={styles.privacyNote}>
@@ -114,6 +74,27 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
                 <path d="M7 8.5V6a3 3 0 0 1 6 0v2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
               <span>수업 자료는 선생님의 Google Drive에 저장됩니다.</span>
+            </div>
+          </section>
+
+          <section className={styles.steps} aria-labelledby="steps-title">
+            <h2 id="steps-title">G배움로그로 하는 일</h2>
+            <div className={styles.stepList}>
+              <div className={styles.step}>
+                <span>01</span>
+                <strong>학생별 과제 배부</strong>
+                <p>슬라이드 과제를 학생마다 전달합니다.</p>
+              </div>
+              <div className={styles.step}>
+                <span>02</span>
+                <strong>활동 상황 확인</strong>
+                <p>학생의 참여와 진행 상황을 살펴봅니다.</p>
+              </div>
+              <div className={styles.step}>
+                <span>03</span>
+                <strong>피드백 기록</strong>
+                <p>수업에서 발견한 내용을 기록으로 남깁니다.</p>
+              </div>
             </div>
           </section>
         </div>

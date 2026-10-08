@@ -4,34 +4,22 @@
   --brand: #246b55;
   --line: #e2e9e2;
   min-height: 100svh;
-  background: #f5f8f4;
+  background: #f8faf7;
   color: var(--ink);
-  overflow: hidden;
+  overflow-x: hidden;
   position: relative;
 }
 
-.page::before,
-.page::after {
+.page::before {
   content: '';
   position: absolute;
   pointer-events: none;
   border-radius: 50%;
-}
-
-.page::before {
-  width: 42rem;
-  height: 42rem;
-  background: #eaf3e9;
+  width: 34rem;
+  height: 34rem;
+  background: #f0f5ef;
   right: -22rem;
   top: -25rem;
-}
-
-.page::after {
-  width: 23rem;
-  height: 23rem;
-  border: 1px solid #dfebdf;
-  left: -18rem;
-  bottom: -12rem;
 }
 
 .canvas {
@@ -47,13 +35,7 @@
 
 .header,
 .brand,
-.layout,
-.featureRow,
-.sampleTop,
-.sampleRow,
-.liveBadge,
 .googleButton,
-.supportedApps,
 .privacyNote,
 .footer {
   display: flex;
@@ -66,11 +48,15 @@
 }
 
 .brand {
-  gap: 12px;
+  gap: 8px;
   white-space: nowrap;
-  font-size: 23px;
-  font-weight: 750;
-  letter-spacing: -0.065em;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.brand img {
+  display: block;
 }
 
 .headerNote {
@@ -83,15 +69,18 @@
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
-  gap: clamp(55px, 8vw, 135px);
-  align-items: center;
-  padding: 42px 0 22px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+  grid-template-areas: 'story card' 'steps card';
+  grid-template-rows: auto auto;
+  column-gap: clamp(54px, 7vw, 110px);
+  row-gap: 44px;
+  align-content: center;
+  padding: 55px 0 42px;
 }
 
 .story {
+  grid-area: story;
   max-width: 670px;
-  padding-top: 8px;
 }
 
 .eyebrow {
@@ -111,11 +100,11 @@
 }
 
 .headline {
-  margin: 24px 0 20px;
-  font-size: clamp(40px, 4.2vw, 62px);
-  line-height: 1.19;
-  font-weight: 760;
-  letter-spacing: -0.082em;
+  margin: 20px 0 18px;
+  font-size: clamp(39px, 4vw, 57px);
+  line-height: 1.2;
+  font-weight: 720;
+  letter-spacing: -0.075em;
   white-space: nowrap;
 }
 
@@ -125,140 +114,70 @@
 
 .description {
   color: #66766c;
-  font-size: clamp(16px, 1.34vw, 19px);
-  line-height: 1.75;
+  font-size: clamp(15px, 1.25vw, 17px);
+  line-height: 1.72;
   letter-spacing: -0.035em;
-  font-weight: 450;
+  font-weight: 440;
 }
 
-.featureRow {
-  gap: 14px;
-  margin-top: 25px;
-  color: #6a7a70;
-  font-size: 13px;
-  font-weight: 650;
+.steps {
+  grid-area: steps;
+  max-width: 640px;
+  padding-top: 23px;
+  border-top: 1px solid var(--line);
 }
 
-.featureDot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #a4b3a7;
+.steps h2 {
+  color: #698071;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
-.sample {
-  width: min(100%, 535px);
-  margin-top: 55px;
-  padding: 24px 28px 17px;
-  border: 1px solid #e5ebe3;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.77);
-  box-shadow: 0 16px 46px rgba(36, 71, 52, 0.045);
+.stepList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 18px;
 }
 
-.sampleTop {
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.sampleTop > div {
+.step {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
 }
 
-.sampleOverline {
-  color: #829286;
+.step span {
+  color: var(--brand);
   font-size: 11px;
-  font-weight: 700;
-}
-
-.sampleTop strong {
-  font-size: 16px;
-  font-weight: 740;
-  letter-spacing: -0.045em;
-}
-
-.liveBadge {
-  gap: 6px;
-  white-space: nowrap;
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: #edf6ee;
-  color: #2c775a;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.liveBadge span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #58ad78;
-}
-
-.sampleDivider {
-  height: 1px;
-  margin: 20px 0 8px;
-  background: #edf0eb;
-}
-
-.sampleRow {
-  gap: 14px;
-  min-height: 59px;
-}
-
-.sampleIcon {
-  display: grid;
-  place-items: center;
-  width: 29px;
-  height: 29px;
-  border-radius: 9px;
-  background: #edf3ec;
-  color: #5d826c;
-  font-size: 10px;
   font-weight: 800;
 }
 
-.sampleRow > div {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.step strong {
+  margin-top: 7px;
+  font-size: 14px;
+  font-weight: 710;
+  letter-spacing: -0.035em;
 }
 
-.sampleRow strong {
-  font-size: 13px;
-  font-weight: 720;
+.step p {
+  margin-top: 6px;
+  color: #7e8a80;
+  font-size: 12px;
+  line-height: 1.6;
   letter-spacing: -0.025em;
 }
-
-.sampleRow small {
-  color: #87948b;
-  font-size: 11px;
-}
-
-.sampleDone,
-.sampleProgress,
-.sampleNext {
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.sampleDone { color: #4c8d66; }
-.sampleProgress { color: #246b55; }
-.sampleNext { color: #a2aaa1; }
-
 .signInCard {
+  grid-area: card;
   width: 100%;
   max-width: 452px;
   justify-self: end;
+  align-self: center;
   padding: clamp(32px, 3.3vw, 50px);
   border: 1px solid #e7ebe5;
-  border-radius: 24px;
+  border-radius: 18px;
   background: #fff;
-  box-shadow: 0 22px 70px rgba(29, 62, 39, 0.065);
+  box-shadow: 0 12px 38px rgba(29, 62, 39, 0.045);
 }
 
 .cardOverline {
@@ -328,37 +247,18 @@
 }
 
 .supported {
-  margin-top: 35px;
-  padding: 23px 0;
+  margin-top: 29px;
+  padding: 18px 0 0;
   border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-
-.supportedLabel {
-  color: #8b968d;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.supportedApps {
-  gap: 12px;
-  margin-top: 10px;
-  color: #59695f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.separator {
-  height: 3px;
-  width: 3px;
-  border-radius: 50%;
-  background: #a3afa4;
+  color: #7a887e;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .privacyNote {
   align-items: flex-start;
   gap: 9px;
-  margin-top: 23px;
+  margin-top: 13px;
   color: #849087;
   font-size: 11px;
   line-height: 1.55;
@@ -380,11 +280,13 @@
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) minmax(330px, 0.9fr);
-    gap: 40px;
+    column-gap: 35px;
+    row-gap: 32px;
   }
 
-  .sample { display: none; }
-  .headline { font-size: clamp(38px, 4.8vw, 49px); }
+  .headline { font-size: clamp(36px, 4.5vw, 49px); }
+  .stepList { gap: 13px; }
+  .step p { font-size: 11px; }
 }
 
 @media (max-width: 700px) {
@@ -392,17 +294,27 @@
   .brand { font-size: 21px; }
   .brand img { width: 38px; height: 38px; }
   .headerNote { display: none; }
-  .layout { grid-template-columns: 1fr; gap: 32px; padding: 65px 0 42px; }
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'story' 'card' 'steps';
+    align-content: start;
+    row-gap: 30px;
+    padding: 52px 0 38px;
+  }
   .story { padding: 0; }
-  .headline { margin-top: 18px; font-size: clamp(38px, 8.5vw, 51px); white-space: normal; }
-  .description { font-size: 15px; }
-  .desktopBreak { display: none; }
-  .featureRow { margin-top: 20px; gap: 10px; font-size: 12px; }
+  .headline { margin-top: 18px; font-size: clamp(34px, 8.2vw, 48px); white-space: normal; }
+  .description { font-size: 14px; }
   .signInCard { max-width: none; padding: 32px 26px; }
   .googleButton { margin-top: 30px; }
+  .steps { padding-top: 21px; }
+  .stepList { grid-template-columns: 1fr; gap: 16px; margin-top: 18px; }
+  .step { display: grid; grid-template-columns: 26px 1fr; column-gap: 10px; }
+  .step span { grid-row: 1 / 3; padding-top: 1px; }
+  .step strong { margin: 0; }
+  .step p { margin-top: 3px; font-size: 12px; }
   .footer { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page *, .page *::before, .page *::after { scroll-behavior: auto !important; }
+  .page *, .page *::before { scroll-behavior: auto !important; }
 }

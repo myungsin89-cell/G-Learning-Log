@@ -31,18 +31,18 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
             <BrandMark size={42} />
             <span>G배움로그</span>
           </div>
-          <span className={styles.headerNote}>교사를 위한 수업 기록 도구</span>
+          <span className={styles.headerNote}>학생의 작업 과정을 살피는 도구</span>
         </header>
 
         <div className={styles.layout}>
           <section className={styles.story} aria-labelledby="hero-title">
             <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> G배움로그를 소개합니다</div>
             <h1 id="hero-title" className={styles.headline}>
-              과제부터 피드백까지,<br />
-              <span>배움의 흐름을 한눈에.</span>
+              학생의 슬라이드 작업,<br />
+              <span>과정까지 한눈에.</span>
             </h1>
             <p className={styles.description}>
-              구글 슬라이드 과제를 학생별로 나누고, 활동을 확인하며 피드백을 남기는 선생님용 대시보드입니다.
+              구글 슬라이드의 작업 기록과 복사·붙여넣기 의심 내역을 확인하고, 피드백이 필요한 학생을 빠르게 찾습니다.
             </p>
           </section>
 
@@ -78,22 +78,22 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
           </section>
 
           <section className={styles.steps} aria-labelledby="steps-title">
-            <h2 id="steps-title">G배움로그로 하는 일</h2>
+            <h2 id="steps-title">G배움로그에서 살펴볼 수 있는 것</h2>
             <div className={styles.stepList}>
               <div className={styles.step}>
                 <span>01</span>
-                <strong>학생별 과제 배부</strong>
-                <p>슬라이드 과제를 학생마다 전달합니다.</p>
+                <strong>슬라이드 작업 기록</strong>
+                <p>학생이 언제, 어떻게 내용을 바꿨는지 살펴봅니다.</p>
               </div>
               <div className={styles.step}>
                 <span>02</span>
-                <strong>활동 상황 확인</strong>
-                <p>학생의 참여와 진행 상황을 살펴봅니다.</p>
+                <strong>복붙 의심 내역</strong>
+                <p>짧은 시간에 크게 늘어난 텍스트를 확인합니다.</p>
               </div>
               <div className={styles.step}>
                 <span>03</span>
-                <strong>피드백 기록</strong>
-                <p>수업에서 발견한 내용을 기록으로 남깁니다.</p>
+                <strong>피드백 필요 학생</strong>
+                <p>작업 흐름을 살펴 도움이 필요한 학생을 찾습니다.</p>
               </div>
             </div>
           </section>

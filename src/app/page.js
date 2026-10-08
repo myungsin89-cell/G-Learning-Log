@@ -13,6 +13,8 @@ import {
   saveGoogleConfig
 } from '@/lib/googleApi';
 import MadeByStamp from '@/components/MadeByStamp';
+import EntryScreen from '@/components/EntryScreen';
+import BrandMark from '@/components/BrandMark';
 
 export default function Home() {
   const router = useRouter();
@@ -230,222 +232,13 @@ export default function Home() {
     }
   };
 
-  // Render Clean Minimal Centered Login Page (Single Viewport Layout)
-  if (sdkStatus === 'ready' && !isAuthenticated) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        width: '100%', 
-        backgroundColor: '#f8fafc', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        padding: '2rem 1.5rem',
-        position: 'relative'
-      }}>
-        {/* Subtle Brand Background Accent */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '280px',
-          background: 'linear-gradient(180deg, #ecfdf5 0%, rgba(248, 250, 252, 0) 100%)',
-          pointerEvents: 'none'
-        }} />
-
-        {/* Main Centered Login Card */}
-        <div style={{ 
-          position: 'relative',
-          zIndex: 1,
-          maxWidth: '460px', 
-          width: '100%', 
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.02)',
-          padding: '3rem 2.5rem',
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center',
-          gap: '2rem'
-        }}>
-          
-          {/* Logo and Title (Google 4-Color G + 배움 로그) */}
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <h1 style={{ 
-              fontSize: '2.6rem', 
-              fontWeight: 900, 
-              color: '#0f172a', 
-              letterSpacing: '-0.03em', 
-              lineHeight: '1.2',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.45rem',
-              marginBottom: '0.6rem'
-            }}>
-              {/* Google 4-Color G */}
-              <svg width="40" height="40" viewBox="0 0 48 48" style={{ display: 'block', flexShrink: 0 }}>
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-              </svg>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span>배움 로그</span>
-                {/* Sleek Footprint Motif */}
-                <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, opacity: 0.85, transform: 'rotate(5deg)' }}>
-                  <ellipse cx="16" cy="30" rx="6.5" ry="9.5" transform="rotate(-15 16 30)" fill="#0f172a"/>
-                  <circle cx="10" cy="16.5" r="2" fill="#0f172a"/>
-                  <circle cx="14" cy="14.5" r="2.2" fill="#0f172a"/>
-                  <circle cx="18.5" cy="15" r="2" fill="#0f172a"/>
-                  <circle cx="22.5" cy="17" r="1.8" fill="#0f172a"/>
-                  <ellipse cx="32" cy="20" rx="6.5" ry="9.5" transform="rotate(15 32 20)" fill="#334155"/>
-                  <circle cx="26" cy="6.5" r="2" fill="#334155"/>
-                  <circle cx="30.5" cy="4.5" r="2.2" fill="#334155"/>
-                  <circle cx="35" cy="5" r="2" fill="#334155"/>
-                  <circle cx="39" cy="7" r="1.8" fill="#334155"/>
-                </svg>
-              </span>
-            </h1>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: 600, letterSpacing: '-0.01em' }}>
-              구글 워크스페이스 실시간 과정평가 대시보드
-            </p>
-          </div>
-
-          {/* Google Sign-in Button */}
-          <button 
-            className="btn-google-login" 
-            onClick={handleLogin} 
-            style={{ 
-              width: '100%',
-              padding: '0.95rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: 800,
-              borderRadius: '12px',
-              backgroundColor: '#ffffff',
-              border: '1.5px solid #cbd5e1',
-              color: '#1e293b',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7l2.76 2.13c1.62-1.49 2.53-3.69 2.53-6.46z"/>
-              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.76-2.13c-.76.51-1.74.82-3.2.82-2.46 0-4.54-1.66-5.28-3.9L.96 12.75C2.43 15.89 5.5 18 9 18z"/>
-              <path fill="#FBBC05" d="M3.72 10.6c-.19-.58-.3-1.2-.3-1.8s.11-1.22.3-1.8L.96 4.9C.32 6.18 0 7.6 0 9s.32 2.82.96 4.1l2.76-2.5z"/>
-              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.96 5.25L3.72 7.75C4.46 5.52 6.54 3.58 9 3.58z"/>
-            </svg>
-            Google 계정으로 로그인
-          </button>
-
-          {/* Google Workspace Integration Display */}
-          <div style={{ 
-            width: '100%',
-            backgroundColor: '#f8fafc', 
-            border: '1px solid #e2e8f0', 
-            borderRadius: '14px', 
-            padding: '1.25rem 0.85rem', 
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', marginBottom: '0.95rem', letterSpacing: '0.05em' }}>
-              안전하게 연동되는 GOOGLE WORKSPACE
-            </div>
-            
-            {/* 5 Workspace Apps Grid (Active 3 + Upcoming 2) */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '1.25rem', marginBottom: '0.85rem', flexWrap: 'nowrap' }}>
-              
-              {/* Google Drive (Active) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="구글 드라이브: 학급 명단 및 데이터 자동 저장">
-                <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/google-drive.svg" alt="Google Drive" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Drive</span>
-              </div>
-
-              {/* Google Sheets (Active) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="구글 스프레드시트: 학생별 타임라인 로그 DB">
-                <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/google-sheets.svg" alt="Google Sheets" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Sheets</span>
-              </div>
-
-              {/* Google Slides (Active) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="구글 슬라이드: 발표 및 모둠 협업 실시간 모니터링">
-                <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/google-slides.svg" alt="Google Slides" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Slides</span>
-              </div>
-
-              {/* Google Docs (Upcoming / Muted Grayscale) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', opacity: 0.55, filter: 'grayscale(0.65)' }} title="구글 문서: 글쓰기 및 개별 첨삭 과정 모니터링 (연동 준비 중)">
-                <div style={{ position: 'relative', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/google-docs.svg" alt="Google Docs" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                  <span style={{ 
-                    position: 'absolute', 
-                    top: '-6px', 
-                    right: '-10px', 
-                    fontSize: '0.55rem', 
-                    fontWeight: 900, 
-                    backgroundColor: '#e2e8f0', 
-                    color: '#475569', 
-                    padding: '0.05rem 0.3rem', 
-                    borderRadius: '4px',
-                    lineHeight: '1.2'
-                  }}>
-                    예정
-                  </span>
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b' }}>Docs</span>
-              </div>
-
-              {/* Google Forms (Upcoming / Muted Grayscale) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', opacity: 0.55, filter: 'grayscale(0.65)' }} title="구글 설문지: 설문 및 퀴즈 실시간 응답 분석 (연동 준비 중)">
-                <div style={{ position: 'relative', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/google-forms.svg" alt="Google Forms" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                  <span style={{ 
-                    position: 'absolute', 
-                    top: '-6px', 
-                    right: '-10px', 
-                    fontSize: '0.55rem', 
-                    fontWeight: 900, 
-                    backgroundColor: '#e2e8f0', 
-                    color: '#475569', 
-                    padding: '0.05rem 0.3rem', 
-                    borderRadius: '4px',
-                    lineHeight: '1.2'
-                  }}>
-                    예정
-                  </span>
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b' }}>Forms</span>
-              </div>
-
-            </div>
-
-            <div style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: '1.45' }}>
-              기록은 개인 구글 시트에 기록되고,<br />
-              파일은 구글 드라이브에 안전하게 저장됩니다.
-            </div>
-          </div>
-          
-        </div>
-
-        {/* Subtle Signature Stamp */}
-        <MadeByStamp style={{ position: 'relative', marginTop: '1rem', paddingBottom: '0.5rem' }} />
-      </div>
-    );
+  if (sdkStatus === 'loading') {
+    return <EntryScreen loading />;
   }
 
+  if (sdkStatus === 'ready' && !isAuthenticated) {
+    return <EntryScreen onLogin={handleLogin} />;
+  }
   // Authorized Dashboard/Workspace flow (Aligned from top, no full-screen centering)
   return (
     <div style={{ width: '100%', minHeight: '100vh', backgroundColor: 'var(--bg-app)' }}>
@@ -462,14 +255,9 @@ export default function Home() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <svg width="24" height="24" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
+            <BrandMark size={24} />
             <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              배움 로그
+              G배움로그
             </span>
           </div>
           <span style={{ 
@@ -506,24 +294,6 @@ export default function Home() {
       {/* Main content body (Full-width modern app layout: Left Sidebar + Right Workspace) */}
       <main style={{ width: '100%', maxWidth: '1600px', margin: '0 auto', padding: '1.75rem 2rem' }}>
         
-        {sdkStatus === 'loading' && (
-          <div style={{ textAlign: 'center', padding: '6rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', color: 'var(--brand-green-dark)', animation: 'spin 1s linear infinite', marginBottom: '1.25rem' }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="2" x2="12" y2="6" />
-                <line x1="12" y1="18" x2="12" y2="22" />
-                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-                <line x1="2" y1="12" x2="6" y2="12" />
-                <line x1="18" y1="12" x2="22" y2="12" />
-                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
-                <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
-              </svg>
-            </div>
-            <h3 style={{ fontWeight: 800, color: 'var(--text-main)', margin: 0, fontSize: '1.2rem' }}>구글 연결 모듈 초기화 중...</h3>
-          </div>
-        )}
-
         {sdkStatus === 'config_missing' && (
           <div className="card" style={{ textAlign: 'center', padding: '3rem', maxWidth: '520px', margin: '3rem auto', borderColor: '#fca5a5', backgroundColor: '#fff5f5' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#fee2e2', color: '#b91c1c', marginBottom: '1.25rem' }}>

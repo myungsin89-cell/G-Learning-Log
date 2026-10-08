@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import MadeByStamp from '@/components/MadeByStamp';
+import BrandMark from '@/components/BrandMark';
 
 export default function StudentPortal() {
   const params = useParams();
@@ -115,21 +116,7 @@ export default function StudentPortal() {
       {!isCodeVerified ? (
         <div className="card" style={{ padding: '2.5rem 2rem', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
-            <svg width="56" height="56" viewBox="0 0 48 48">
-              {/* Left Footprint (Blue & Green) */}
-              <ellipse cx="16" cy="30" rx="6.5" ry="9.5" transform="rotate(-15 16 30)" fill="#4285F4"/>
-              <circle cx="10" cy="16.5" r="2" fill="#4285F4"/>
-              <circle cx="14" cy="14.5" r="2.2" fill="#34A853"/>
-              <circle cx="18.5" cy="15" r="2" fill="#34A853"/>
-              <circle cx="22.5" cy="17" r="1.8" fill="#34A853"/>
-
-              {/* Right Footprint (Red & Yellow) */}
-              <ellipse cx="32" cy="20" rx="6.5" ry="9.5" transform="rotate(15 32 20)" fill="#EA4335"/>
-              <circle cx="26" cy="6.5" r="2" fill="#FBBC05"/>
-              <circle cx="30.5" cy="4.5" r="2.2" fill="#FBBC05"/>
-              <circle cx="35" cy="5" r="2" fill="#EA4335"/>
-              <circle cx="39" cy="7" r="1.8" fill="#EA4335"/>
-            </svg>
+            <BrandMark size={56} alt="G배움로그" />
           </div>
 
           <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--brand-green-dark)', margin: '0 0 0.5rem 0' }}>

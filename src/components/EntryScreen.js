@@ -42,7 +42,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
               <span>과정까지 한눈에.</span>
             </h1>
             <p className={styles.description}>
-              구글 슬라이드의 작업 기록과 복사·붙여넣기 의심 내역을 확인하고, 피드백이 필요한 학생을 빠르게 찾습니다.
+              구글 슬라이드로 수업할 때, 학생마다 다른 진행 상황을 살피고 필요한 도움을 제때 전할 수 있습니다.
             </p>
           </section>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   initGoogleSDKs, 
@@ -14,7 +14,8 @@ import {
 } from '@/lib/googleApi';
 import MadeByStamp from '@/components/MadeByStamp';
 import EntryScreen from '@/components/EntryScreen';
-import BrandMark from '@/components/BrandMark';
+import ClassSelection, { ClassSelectionHeader } from '@/components/ClassSelection';
+import classStyles from '@/components/ClassSelection.module.css';
 
 export default function Home() {
   const router = useRouter();
@@ -50,13 +51,20 @@ export default function Home() {
   };
   const closeAlert = () => setAlertConfig(null);
 
-  // Initialize SDKs on mount using .env variables
-  useEffect(() => {
-    tryInitializeSDKs();
+  // Load teacher's existing classroom rosters
+  const loadClassrooms = useCallback(async () => {
+    setIsLoadingList(true);
+    try {
+      const rosters = await fetchClassRosters();
+      setRosterList(rosters);
+    } catch (err) {
+      console.error('Failed to load class rosters:', err);
+    } finally {
+      setIsLoadingList(false);
+    }
   }, []);
 
-  const tryInitializeSDKs = () => {
-    setSdkStatus('loading');
+  const tryInitializeSDKs = useCallback(() => {
     initGoogleSDKs(
       (token) => {
         setSdkStatus('ready');
@@ -74,20 +82,12 @@ export default function Home() {
         }
       }
     );
-  };
+  }, [loadClassrooms]);
 
-  // Load teacher's existing classroom rosters
-  const loadClassrooms = async () => {
-    setIsLoadingList(true);
-    try {
-      const rosters = await fetchClassRosters();
-      setRosterList(rosters);
-    } catch (err) {
-      console.error('Failed to load class rosters:', err);
-    } finally {
-      setIsLoadingList(false);
-    }
-  };
+  // Initialize SDKs on mount using .env variables
+  useEffect(() => {
+    tryInitializeSDKs();
+  }, [tryInitializeSDKs]);
 
   // Handle Login
   const handleLogin = async () => {
@@ -239,60 +239,11 @@ export default function Home() {
   if (sdkStatus === 'ready' && !isAuthenticated) {
     return <EntryScreen onLogin={handleLogin} />;
   }
-  // Authorized Dashboard/Workspace flow (Aligned from top, no full-screen centering)
   return (
-    <div style={{ width: '100%', minHeight: '100vh', backgroundColor: 'var(--bg-app)' }}>
-      
-      {/* Flush, modern borderless header navigation */}
-      <header style={{ 
-        width: '100%', 
-        backgroundColor: 'var(--bg-card)', 
-        borderBottom: '1px solid var(--border-card)', 
-        padding: '0.85rem 2rem', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center' 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <BrandMark size={24} />
-            <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              G배움로그
-            </span>
-          </div>
-          <span style={{ 
-            fontSize: '0.75rem', 
-            fontWeight: 700, 
-            backgroundColor: 'var(--bg-light-green)', 
-            color: 'var(--text-light-green)', 
-            padding: '0.15rem 0.5rem', 
-            borderRadius: '4px',
-            marginLeft: '0.25rem'
-          }}>
-            학급 선택
-          </span>
-        </div>
-        <div>
-          <button 
-            style={{ 
-              background: '#fef2f2', 
-              color: '#991b1b', 
-              border: '1px solid #fee2e2', 
-              padding: '0.4rem 0.85rem', 
-              borderRadius: '6px', 
-              fontSize: '0.85rem', 
-              fontWeight: 700,
-              cursor: 'pointer'
-            }} 
-            onClick={handleLogout}
-          >
-            로그아웃
-          </button>
-        </div>
-      </header>
+    <div className={classStyles.page}>
+      <ClassSelectionHeader onLogout={handleLogout} />
 
-      {/* Main content body (Full-width modern app layout: Left Sidebar + Right Workspace) */}
-      <main style={{ width: '100%', maxWidth: '1600px', margin: '0 auto', padding: '1.75rem 2rem' }}>
+      <main className={classStyles.main}>
         
         {sdkStatus === 'config_missing' && (
           <div className="card" style={{ textAlign: 'center', padding: '3rem', maxWidth: '520px', margin: '3rem auto', borderColor: '#fca5a5', backgroundColor: '#fff5f5' }}>
@@ -325,304 +276,15 @@ export default function Home() {
         )}
 
         {sdkStatus === 'ready' && isAuthenticated && (
-          <div style={{ width: '100%' }}>
-            {isLoadingList ? (
-              <div style={{ textAlign: 'center', padding: '6rem 1rem', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', color: 'var(--brand-green-dark)', animation: 'spin 1s linear infinite', marginBottom: '1rem' }}>
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="2" x2="12" y2="6" />
-                    <line x1="12" y1="18" x2="12" y2="22" />
-                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-                    <line x1="2" y1="12" x2="6" y2="12" />
-                    <line x1="18" y1="12" x2="22" y2="12" />
-                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
-                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
-                  </svg>
-                </div>
-                <h3 style={{ fontWeight: 800, color: 'var(--text-main)', margin: 0, fontSize: '1.2rem' }}>학급 목록 불러오는 중...</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '0.45rem' }}>내 구글 드라이브의 학급 데이터를 안전하게 조회하고 있습니다.</p>
-              </div>
-            ) : (
-              /* Modern 2-Column Dashboard (Left Guide/Action Card + Right Class Cards Grid) */
-              <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                
-                {/* Left Panel: Class Creation Guide & Action (320px fixed width) */}
-                <div style={{ flex: '0 0 320px', width: '320px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  
-                  {/* Main Create Class Button */}
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1.25rem',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      borderRadius: '14px',
-                      boxShadow: '0 6px 16px rgba(22, 101, 52, 0.25)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.6rem',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    <span style={{ fontSize: '1.3rem', lineHeight: '1' }}>＋</span> 새 학급 등록하기
-                  </button>
-
-                  {/* Step-by-Step Registration Guide Card */}
-                  <div className="card" style={{ padding: '1.5rem', borderRadius: '18px', backgroundColor: '#ffffff' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                      {/* Google 4-Color Footprints Emblem */}
-                      <svg width="22" height="22" viewBox="0 0 48 48">
-                        <ellipse cx="16" cy="30" rx="6.5" ry="9.5" transform="rotate(-15 16 30)" fill="#4285F4"/>
-                        <circle cx="10" cy="16.5" r="2" fill="#4285F4"/>
-                        <circle cx="14" cy="14.5" r="2.2" fill="#34A853"/>
-                        <circle cx="18.5" cy="15" r="2" fill="#34A853"/>
-                        <circle cx="22.5" cy="17" r="1.8" fill="#34A853"/>
-                        <ellipse cx="32" cy="20" rx="6.5" ry="9.5" transform="rotate(15 32 20)" fill="#EA4335"/>
-                        <circle cx="26" cy="6.5" r="2" fill="#FBBC05"/>
-                        <circle cx="30.5" cy="4.5" r="2.2" fill="#FBBC05"/>
-                        <circle cx="35" cy="5" r="2" fill="#EA4335"/>
-                        <circle cx="39" cy="7" r="1.8" fill="#EA4335"/>
-                      </svg>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-main)' }}>
-                        학급 등록 안내
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      <div style={{ display: 'flex', gap: '0.65rem' }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, flexShrink: 0, marginTop: '2px' }}>
-                          1
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
-                          <strong>학급명 입력:</strong> 관리할 반 이름(예: <code>5학년 2반</code>)을 적습니다.
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.65rem' }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, flexShrink: 0, marginTop: '2px' }}>
-                          2
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
-                          <strong>명단 입력 (개인정보 안심):</strong> <code>번호 이름</code> 또는 개인정보 보호를 위해 <strong><code>번호(1~25)</code>만</strong> 등록해도 완벽하게 작동합니다.
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.65rem' }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, flexShrink: 0, marginTop: '2px' }}>
-                          3
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
-                          <strong>과제 1초 배부:</strong> 구글 슬라이드/독스 템플릿 링크를 넣으면 학생별 개인 사본이 즉시 완성됩니다.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>총 개설 학급</span>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--brand-green-dark)', backgroundColor: '#f0fdf4', padding: '0.15rem 0.6rem', borderRadius: '6px' }}>
-                        {rosterList.length}개
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* CSV Template Download Pill Link */}
-                  <div style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={downloadCSVTemplate}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '0.8rem',
-                        color: '#64748b',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        padding: '0.3rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem'
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      <span>학생 명단 CSV 양식 다운로드</span>
-                    </button>
-                  </div>
-
-                </div>
-
-                {/* Right Main Area: Clean Class Grid (Fills 100% of remaining width) */}
-                <div style={{ flex: 1, minWidth: '320px' }}>
-                  
-                  {rosterList.length === 0 ? (
-                    /* Empty State */
-                    <div 
-                      className="card"
-                      style={{ 
-                        borderStyle: 'dashed', 
-                        borderWidth: '2px', 
-                        borderColor: '#a7f3d0', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        padding: '4.5rem 2rem', 
-                        cursor: 'pointer',
-                        backgroundColor: '#f0fdf4',
-                        borderRadius: '18px',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onClick={() => setShowCreateModal(true)}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--brand-green-dark)', marginBottom: '1rem' }}>
-                        <span style={{ fontSize: '2.2rem', fontWeight: 900, lineHeight: 1 }}>＋</span>
-                      </div>
-                      <span style={{ fontWeight: 900, color: 'var(--brand-green-dark)', fontSize: '1.2rem' }}>첫 번째 학급을 등록해 보세요</span>
-                      <span style={{ fontSize: '0.88rem', color: '#059669', marginTop: '0.45rem' }}>학생 명단을 등록하면 바로 슬라이드/독스 과제를 배부하고 실시간 모니터링을 시작할 수 있습니다.</span>
-                    </div>
-                  ) : (
-                    /* Class Cards Grid - Soft Light Green Themed */
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                      gap: '1.25rem' 
-                    }}>
-                      {rosterList.map((className) => (
-                        <div 
-                          key={className}
-                          className="card"
-                          style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            justifyContent: 'space-between',
-                            minHeight: '155px', 
-                            cursor: 'pointer',
-                            position: 'relative',
-                            borderRadius: '18px',
-                            padding: '1.5rem',
-                            transition: 'all 0.2s ease',
-                            backgroundColor: '#f0fdf4',
-                            border: '1.5px solid #bbf7d0',
-                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.05)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-3px)';
-                            e.currentTarget.style.boxShadow = '0 12px 20px -4px rgba(16, 185, 129, 0.15)';
-                            e.currentTarget.style.borderColor = '#86efac';
-                            e.currentTarget.style.backgroundColor = '#ecfdf5';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(16, 185, 129, 0.05)';
-                            e.currentTarget.style.borderColor = '#bbf7d0';
-                            e.currentTarget.style.backgroundColor = '#f0fdf4';
-                          }}
-                          onClick={() => router.push(`/class/${encodeURIComponent(className)}`)}
-                        >
-                          {/* Delete (X) button */}
-                          <button
-                            type="button"
-                            title="학급 삭제"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setClassToDelete(className);
-                            }}
-                            style={{
-                              position: 'absolute',
-                              top: '1rem',
-                              right: '1rem',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              border: '1px solid transparent',
-                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                              color: '#94a3b8',
-                              fontSize: '1.15rem',
-                              fontWeight: 900,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              zIndex: 10
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fee2e2';
-                              e.currentTarget.style.color = '#ef4444';
-                              e.currentTarget.style.borderColor = '#fca5a5';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-                              e.currentTarget.style.color = '#94a3b8';
-                              e.currentTarget.style.borderColor = 'transparent';
-                            }}
-                          >
-                            &times;
-                          </button>
-
-                          <div>
-                            <div style={{ marginBottom: '0.4rem', paddingRight: '2rem' }}>
-                              <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {className}
-                              </h3>
-                            </div>
-                            <p style={{ color: '#047857', fontSize: '0.82rem', margin: 0, fontWeight: 600 }}>
-                              구글 워크스페이스 실시간 연동
-                            </p>
-                          </div>
-
-                          <div style={{ 
-                            marginTop: '1.25rem', 
-                            paddingTop: '0.85rem', 
-                            borderTop: '1px solid rgba(187, 247, 208, 0.6)', 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center' 
-                          }}>
-                            <span style={{ 
-                              fontSize: '0.82rem', 
-                              fontWeight: 800, 
-                              color: 'var(--brand-green-dark)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem'
-                            }}>
-                              과제 목록 열기 ➔
-                            </span>
-                            <span style={{ 
-                              fontSize: '0.72rem', 
-                              backgroundColor: '#ffffff', 
-                              color: '#15803d', 
-                              padding: '0.2rem 0.55rem', 
-                              borderRadius: '6px',
-                              fontWeight: 800,
-                              border: '1px solid #bbf7d0'
-                            }}>
-                              등록 완료
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-
-              </div>
-            )}
-          </div>
+          <ClassSelection
+            classNames={rosterList}
+            loading={isLoadingList}
+            onCreate={() => setShowCreateModal(true)}
+            onSelect={(className) => router.push(`/class/${encodeURIComponent(className)}`)}
+            onDelete={setClassToDelete}
+          />
         )}
 
-        {/* Subtle Signature Stamp */}
         <MadeByStamp />
       </main>
 
@@ -711,7 +373,7 @@ export default function Home() {
                 ) : (
                   <div style={{ padding: '1.25rem', border: '1px dashed var(--border-card)', borderRadius: '8px', textAlign: 'center', backgroundColor: '#fdfdfd' }}>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                      엑셀에서 번호(A열), 이름(B열)로 입력하신 후 <strong>'CSV(쉼표로 분리)'</strong> 형식으로 저장하여 업로드하세요.
+                      엑셀에서 번호(A열), 이름(B열)로 입력하신 후 <strong>&apos;CSV(쉼표로 분리)&apos;</strong> 형식으로 저장하여 업로드하세요.
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                       <input 
@@ -917,6 +579,7 @@ export default function Home() {
               saveGoogleConfig(cId, aKey);
               setShowConfigModal(false);
               showAlert('구글 API 자격 증명이 브라우저에 저장되었습니다! 연결을 시작합니다.', '저장 완료', 'success');
+              setSdkStatus('loading');
               tryInitializeSDKs();
             }}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

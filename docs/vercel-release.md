@@ -2,6 +2,14 @@
 
 기존 운영 배포와 Google 파일을 유지하며 별도 Vercel 프로젝트에서 신버전을 제공한다. 기존 main 대신 release 브랜치를 사용한다.
 
+- Vercel 프로젝트: `g-learning-log-next`
+- 운영 브랜치: `release/next-version-2026-10-09`
+- 운영 원본: `https://g-learning-log-next.vercel.app`
+- 개인정보처리방침: `https://g-learning-log-next.vercel.app/privacy`
+- 이용 안내: `https://g-learning-log-next.vercel.app/terms`
+
+운영 원본은 Google OAuth 허용 원본에 별도로 등록해야 한다. 등록·로그인 확인과 Google 심사 완료는 별개다.
+
 ## 공개 환경 변수
 
 - `NEXT_PUBLIC_APP_ENTRY=next`: 도메인 첫 화면을 신버전 로그인으로 연결한다.

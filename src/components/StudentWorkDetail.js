@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { studentLabel } from '@/lib/workRecords.mjs';
 import { formatAmount, formatCheckedAt } from '@/lib/storedWorkRecords.mjs';
 import CurrentSlideContents from './CurrentSlideContents';
@@ -17,6 +17,21 @@ function RecordLine({ record, readOnly = false }) {
   if (record.charDelta == null) return <li><time>{formatCheckedAt(record.checkedAt)}</time><div><span>글자 변화량 미기록{record.imageDelta != null ? ` · 이미지 ${signed(record.imageDelta)}개` : ''}{record.slideDelta != null ? ` · 슬라이드 ${signed(record.slideDelta)}장` : ''}</span><small>저장된 두 확인 시점 사이의 기록</small></div></li>;
   const long = record.source === 'gap_comparison';
   return <li><time>{readOnly ? `${formatCheckedAt(record.previousCheckedAt)} → ${formatCheckedAt(record.checkedAt)}` : long ? `${day(record.previousCheckedAt)} → ${day(record.checkedAt)}` : time(record.checkedAt)}</time><div><span>글자 수 {signed(record.charDelta)}자{record.imageDelta ? ` · 이미지 ${signed(record.imageDelta)}개` : ''}{record.slideDelta ? ` · 슬라이드 ${signed(record.slideDelta)}장` : ''}</span><small>{long ? '지난 확인 이후의 차이 · 실제 작성 시점 미확인' : `연속 확인 · ${Math.round((Date.parse(record.checkedAt) - Date.parse(record.previousCheckedAt)) / 1000)}초 간격`}</small></div></li>;
+}
+
+function RecentRecordList({ records, readOnly }) {
+  const [limit, setLimit] = useState(3);
+  const listId = useId();
+  const changes = records.filter((record) => record.charDelta !== 0 || record.imageDelta || record.slideDelta).slice().reverse();
+  const visible = changes.slice(0, limit);
+  const remaining = changes.length - visible.length;
+  return <>
+    <ol id={listId} className={styles.activityList}>{visible.map((record) => <RecordLine readOnly={readOnly} key={record.id} record={record} />)}{visible.length === 0 && <li>{readOnly ? '저장된 비교 기록이 없습니다.' : '이번 확인에서 새 변화가 없어요.'}</li>}</ol>
+    {changes.length > 3 && <div className={styles.recordListControls}>
+      <span className={styles.smallNote} role="status">전체 {changes.length}개 중 {visible.length}개 표시</span>
+      <div>{remaining > 0 && <button type="button" className={styles.secondaryButton} aria-controls={listId} onClick={() => setLimit((count) => count + 10)}>이전 기록 더보기 ({remaining}개)</button>}{limit > 3 && <button type="button" className={styles.textAction} aria-controls={listId} onClick={() => setLimit(3)}>최근 3개만 보기</button>}</div>
+    </div>}
+  </>;
 }
 
 function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset = false, onDone, maxLength = 2000, rows = 3, buttonLabel }) {
@@ -48,7 +63,6 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
   const writable = !readOnly || canWrite;
   const records = readOnly ? student.records : mode === 'lesson' ? student.lessonRecords : student.projectRecords;
   const hasLegacy = readOnly && records.some((record) => record.source === 'legacy_unverified');
-  const recent = records.filter((r) => r.charDelta !== 0 || r.imageDelta || r.slideDelta).slice(-3).reverse();
   const latest = records.at(-1);
   const surgeSeconds = readOnly ? Math.round((Date.parse(latest?.checkedAt) - Date.parse(latest?.previousCheckedAt)) / 1000) : 25;
   const authorControl = (message) => readOnly && canWrite && message.role !== 'teacher' && message.origin !== 'stored_feedback' && <button className={styles.textAction} disabled={roleBusy !== null} onClick={async () => {
@@ -63,7 +77,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection}><div className={styles.panelHeading}><h3>{hasLegacy && !records.some((record) => Number.isFinite(record.charDelta)) ? '최근 저장 기록' : '최근 변화'}</h3>{surge && <span className={styles.surgeFlag}>{reviewed ? '확인 완료' : '텍스트 급증 · 확인 필요'}</span>}</div>
       {surge && <div className={styles.surgeNotice}><p>{surgeSeconds}초 동안 글자 수가 {formatAmount(readOnly ? latest.charDelta : 286)}자 늘었습니다. 작성 맥락을 학생과 확인해 주세요.</p><small>붙여넣기를 확정하는 표시가 아니에요.</small>{writable && <button className={styles.textAction} onClick={onReview}>{reviewed ? '다시 확인 필요로 표시' : '확인 완료로 표시'}</button>}</div>}
-      <ol className={styles.activityList}>{recent.map((record) => <RecordLine readOnly={readOnly} key={record.id} record={record} />)}{recent.length === 0 && <li>{readOnly ? "저장된 비교 기록이 없습니다." : "이번 확인에서 새 변화가 없어요."}</li>}</ol>
+      <RecentRecordList key={mode} records={records} readOnly={readOnly} />
     </section>
 
     <section className={styles.detailSection}><h3>작업 흐름</h3><StudentActivityGraph records={records} templateBaseline={templateBaseline} student={student} /></section>

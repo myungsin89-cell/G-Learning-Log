@@ -163,6 +163,9 @@
 .unreadBadge { color: #246b55; background: #edf5ee; padding: 3px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; }
 .replyMuted { color: #718579; font-size: 10px; }
 .textAction { border: 0; background: none; color: #246b55; font: inherit; font-size: 12px; font-weight: 650; padding: 8px 0; cursor: pointer; }
+.recordListControls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e3eae3; }
+.recordListControls > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.recordListControls .smallNote { margin: 0; }
 .exportActions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .reportScope { margin-bottom: 17px; color: #617768; font-size: 12px; line-height: 1.8; }
 .tableUnread { display: block; margin-top: 5px; color: #246b55; font-size: 10px; }

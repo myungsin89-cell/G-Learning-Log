@@ -1,0 +1,23 @@
+.page { min-height: 100svh; background: #f8faf7; color: #20342b; }
+.brand { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 28px; border-bottom: 1px solid #e6ece5; background: #fff; font-size: 21px; font-weight: 730; letter-spacing: -.045em; }
+.main { max-width: 850px; padding: 55px 24px 25px; margin: auto; }
+.heading { margin-bottom: 32px; text-align: center; }
+.heading p { color: #468067; font-size: 14px; font-weight: 700; }
+.heading h1 { font-size: clamp(26px,4vw,38px); letter-spacing: -.05em; line-height: 1.4; margin-top: 12px; }
+.heading > span { display: block; margin-top: 15px; color: #708074; font-size: 15px; }
+.search { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border: 1px solid #dfe7de; border-radius: 11px; background: #fff; margin-bottom: 22px; color: #708074; }
+.search input { width: 100%; outline: 0; border: 0; font: inherit; font-size: 14px; color: #20342b; }
+.grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; }
+.grid > button { display: flex; align-items: center; gap: 13px; padding: 22px 18px; border: 1px solid #e1e9e1; border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.grid > button:hover { border-color: #8eb99b; background: #f1f7ee; }
+.grid > button > span { color: #718277; font-size: 12px; white-space: nowrap; }
+.grid strong { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.grid i { margin-left: auto; color: #39735a; font-style: normal; }
+.empty { padding: 30px; text-align: center; color: #708074; font-size: 14px; line-height: 1.8; }
+.confirm { position: fixed; bottom: 18px; left: 20px; right: 20px; max-width: 800px; margin: auto; z-index: 2; padding: 22px; border: 1px solid #b7d2be; border-radius: 14px; background: #fff; box-shadow: 0 10px 35px #20342b17; text-align: center; font-size: 15px; line-height: 1.8; }
+.main:has(.confirm) { padding-bottom: 180px; }
+.confirm a, .empty button { display: inline-flex; margin: 13px 7px 0; padding: 11px 19px; border: 0; border-radius: 10px; background: #246b55; color: #fff; text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
+.confirm button { margin: 13px 7px 0; padding: 11px 15px; border: 1px solid #dfe7de; border-radius: 10px; background: #fff; color: #617768; font: inherit; cursor: pointer; }
+.example { display: block; text-align: center; margin-bottom: 17px; color: #7b8b80; font-size: 11px; }
+.page button:focus-visible, .page a:focus-visible, .search:focus-within { outline: 3px solid #a4ceb0; outline-offset: 3px; }
+@media(max-width:600px) { .main { padding: 32px 20px 20px; } .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .grid > button { padding: 20px 13px; gap: 9px; } .grid strong { font-size: 15px; } .grid i { display: none; } }

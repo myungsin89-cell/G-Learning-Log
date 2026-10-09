@@ -1,0 +1,17 @@
+.editor { margin: 0; font-weight: 400; }
+.editor > label { display: block; margin-bottom: 10px; color: #526659; font-size: 13px; font-weight: 650; }
+.row { display: flex; gap: 9px; }
+.editor .row input { width: 100%; min-width: 0; margin-top: 0; padding: 12px 13px; border: 1px solid #dfe7de; border-radius: 9px; background: #fff; color: #20342b; font: inherit; font-size: 14px; font-weight: 400; }
+.row > button { flex: 0 0 70px; border: 0; border-radius: 9px; background: #246b55; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.row > button:disabled { opacity: .45; cursor: default; }
+.list { margin-top: 22px; padding-top: 17px; border-top: 1px solid #edf1ec; }
+.list > p { color: #718277; font-size: 12px; }
+.list strong { color: #39735a; font-weight: 650; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 50px; max-height: 220px; overflow-y: auto; margin-top: 12px; padding: 3px; }
+.chips > span { display: inline-flex; align-items: center; align-self: flex-start; gap: 10px; max-width: 100%; padding: 7px 8px 7px 11px; border-radius: 7px; background: #edf4ed; color: #39735a; font-size: 13px; }
+.chips > span > span { overflow-wrap: anywhere; }
+.chips button { flex: 0 0 23px; height: 23px; padding: 0; border: 0; border-radius: 5px; background: none; color: #718277; font: inherit; font-size: 18px; cursor: pointer; }
+.chips button:hover { background: #dbe9db; color: #20342b; }
+.empty { color: #849087; font-size: 12px; }
+.error { margin-top: 10px; color: #985b35; font-size: 12px; line-height: 1.7; }
+.editor input:focus-visible, .editor button:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 2px; }

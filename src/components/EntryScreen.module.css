@@ -318,3 +318,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before { scroll-behavior: auto !important; }
 }
+.policyLinks { display: flex; gap: 18px; font-size: 12px; }
+.policyLinks a { color: #657b6c; text-decoration: none; }
+.policyLinks a:hover { text-decoration: underline; }
+.policyLinks a:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 4px; }

@@ -1,0 +1,22 @@
+.fields { padding: 0; border: 0; margin: 0; min-width: 0; }
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog > form { min-height: 0; display: flex; flex-direction: column; }
+.body { overflow-y: auto; }
+.dialog > div, .dialog > form > :last-child { flex-shrink: 0; }
+.fields:disabled { opacity: .72; }
+.fields > :first-child { margin-top: 0; }
+.context { display: flex; align-items: center; justify-content: space-between; margin-bottom: 23px; padding: 13px 15px; border-radius: 10px; background: #f1f5ed; color: #396a50; font-size: 13px; font-weight: 700; }
+.context span { color: #788578; font-size: 11px; font-weight: 450; }
+.share { display: flex; align-items: flex-start; gap: 10px; margin-top: 23px; color: #3e6150; font-size: 13px; line-height: 1.65; }
+.share input { margin-top: 4px; accent-color: #246b55; }
+.share small { display: block; color: #77847a; margin-top: 5px; font-size: 11px; }
+.progress, .warning { margin-top: 20px; padding: 13px 15px; border-radius: 9px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.progress { color: #246b55; background: #edf5ee; }
+.warning { color: #854e28; background: #fff6e9; }
+.warning span { display: block; margin-top: 7px; }
+.warning ul { padding-left: 18px; margin-top: 10px; }
+.entryMode { margin-top: 23px; font-size: 13px; }
+.entryMode > strong { display: block; margin-bottom: 9px; }
+.entryMode label { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border: 1px solid #e1e9de; border-radius: 9px; margin-top: 7px; }
+.entryMode input { margin-top: 4px; accent-color: #246b55; }
+.entryMode small { display: block; margin-top: 4px; color: #7c887e; font-size: 11px; line-height: 1.7; }

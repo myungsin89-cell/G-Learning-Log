@@ -51,6 +51,9 @@
 }
 
 .logout:hover { color: #246b55; }
+.refreshButton { flex: 0 0 auto; padding: 12px 17px; border: 1px solid #dce6dc; border-radius: 10px; background: #fff; color: #496654; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.refreshButton:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 3px; }
+.refreshButton:disabled, .logout:disabled, .cardAction:disabled { opacity: .6; cursor: wait; }
 
 .main {
   max-width: 1400px;
@@ -154,6 +157,7 @@
 }
 
 .cardAction {
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   width: 100%;

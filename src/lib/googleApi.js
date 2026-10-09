@@ -15,6 +15,11 @@ export function saveGoogleConfig(clientId, apiKey) {
   localStorage.setItem('slidesight_api_key', apiKey);
 }
 
+
+function assertGoogleWritesAllowed() {
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'readonly') throw new Error('읽기 전용 새 버전에서는 Google 데이터를 수정할 수 없습니다.');
+}
+
 // Global instances
 let tokenClient = null;
 let googleAccessToken = null;
@@ -168,6 +173,7 @@ export function extractSlideId(urlOrId) {
  * 1. 수업용 DB 구글 스프레드시트 생성
  */
 export async function createDatabaseSpreadsheet(className, assignmentName) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
 
   const title = `SlideSight_DB_[${className}]_[${assignmentName}]`;
@@ -186,7 +192,7 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
         {
           properties: {
             title: 'activity_logs',
-            gridProperties: { rowCount: 2000, columnCount: 8 }
+            gridProperties: { rowCount: 2000, columnCount: 13 }
           }
         }
       ]
@@ -198,7 +204,7 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
   // 2) sheets 헤더 작성
   await window.gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: spreadsheetId,
-    range: 'students!A1:N1',
+    range: 'students!A1:O1',
     valueInputOption: 'RAW',
     resource: {
       values: [[
@@ -215,14 +221,15 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
         'keywords_used',
         'blank_slide_count',
         'focus_ratio',
-        'teacher_feedback'
+        'teacher_feedback',
+        'last_checked_at'
       ]]
     }
   });
 
   await window.gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: spreadsheetId,
-    range: 'activity_logs!A1:G1',
+    range: 'activity_logs!A1:M1',
     valueInputOption: 'RAW',
     resource: {
       values: [[
@@ -232,7 +239,8 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
         'slide_count',
         'image_count',
         'keyword_count',
-        'copied_text'
+        'copied_text',
+        'record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'
       ]]
     }
   });
@@ -258,6 +266,7 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
  * 2. 슬라이드 템플릿 복사 및 권한 부여 (병렬 배치 복사 및 사전 검증 탑재)
  */
 export async function duplicateSlideForStudents(templateId, studentsList, spreadsheetId, onProgress) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
   if (!templateId) throw new Error('구글 슬라이드 템플릿 ID가 올바르지 않습니다.');
 
@@ -588,12 +597,57 @@ export async function fetchAssignmentsList(className = null) {
 /**
  * 5. 스프레드시트 DB로부터 전체 학생 데이터 및 로그 데이터 로드
  */
+const recordSchemaReady = new Map();
+
+async function ensureRecordSchema(spreadsheetId) {
+  if (!recordSchemaReady.has(spreadsheetId)) {
+    const upgrade = (async () => {
+      const metadata = await executeWithRetry(() => window.gapi.client.sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties(columnCount)))' }));
+      const extensions = [
+        { title: 'students', start: 14, headers: ['last_checked_at'] },
+        { title: 'activity_logs', start: 7, headers: ['record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'] },
+      ];
+      const requests = [];
+      const data = [];
+      // Read and validate before any mutation; occupied custom columns must survive.
+      for (const extension of extensions) {
+        const properties = metadata.result.sheets?.find((sheet) => sheet.properties.title === extension.title)?.properties;
+        if (!properties) throw new Error(`필수 시트 탭이 없습니다: ${extension.title}`);
+        const end = extension.start + extension.headers.length;
+        const count = properties.gridProperties.columnCount;
+        let existing = [];
+        if (count > extension.start) {
+          const response = await executeWithRetry(() => window.gapi.client.sheets.spreadsheets.values.get({ spreadsheetId,
+            range: `${extension.title}!${String.fromCharCode(65 + extension.start)}1:${String.fromCharCode(64 + Math.min(count, end))}` }));
+          existing = response.result.values || [];
+        }
+        extension.headers.forEach((header, index) => {
+          const occupied = existing[0]?.[index];
+          if (occupied && occupied !== header || !occupied && existing.slice(1).some((row) => row[index] !== undefined && row[index] !== '')) {
+            throw new Error('새 기록 필드 위치에 기존 데이터가 있습니다. 원본을 수정하지 않았습니다.');
+          }
+          if (!occupied) data.push({ range: `${extension.title}!${String.fromCharCode(65 + extension.start + index)}1`, values: [[header]] });
+        });
+        if (count < end) requests.push({ updateSheetProperties: { properties: { sheetId: properties.sheetId, gridProperties: { columnCount: end } }, fields: 'gridProperties.columnCount' } });
+      }
+      if (requests.length) await executeWithRetry(() => window.gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId, resource: { requests } }));
+      if (data.length) await executeWithRetry(() => window.gapi.client.sheets.spreadsheets.values.batchUpdate({ spreadsheetId, resource: { valueInputOption: 'RAW', data } }));
+    })().catch((error) => { recordSchemaReady.delete(spreadsheetId); throw error; });
+    recordSchemaReady.set(spreadsheetId, upgrade);
+  }
+  await recordSchemaReady.get(spreadsheetId);
+}
+
 export async function loadSpreadsheetData(spreadsheetId) {
-  // students 시트 조회 (A1:N100 범위)
+  // Reading old sheets must never create, resize, or write a sheet.
+  const metadata = await executeWithRetry(() => window.gapi.client.sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets(properties(title,gridProperties(columnCount)))' }));
+  const columnCount = (title, limit) => Math.min(limit, metadata.result.sheets?.find((sheet) => sheet.properties.title === title)?.properties.gridProperties.columnCount || limit);
+  const studentEnd = String.fromCharCode(64 + columnCount('students', 15));
+  const logEnd = String.fromCharCode(64 + columnCount('activity_logs', 13));
   const studentResp = await executeWithRetry(() =>
     window.gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
-      range: 'students!A2:N100'
+      range: `students!A2:${studentEnd}`
     })
   );
 
@@ -612,14 +666,15 @@ export async function loadSpreadsheetData(spreadsheetId) {
     keywordsUsed: row[10] ? row[10].split(',').filter(Boolean) : [],
     blankSlideCount: row[11] ? parseInt(row[11]) : 0,
     focusRatio: row[12] ? parseInt(row[12]) : 100,
-    teacherFeedback: row[13] || ''
+    teacherFeedback: row[13] || '',
+    lastCheckedAt: row[14] || null
   }));
 
-  // activity_logs 시트 조회 (A2:G5000 범위)
+  // Read all stored rows so long-running assignments are not truncated at 5,000.
   const logsResp = await executeWithRetry(() =>
     window.gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
-      range: 'activity_logs!A2:G5000'
+      range: `activity_logs!A2:${logEnd}`
     })
   );
 
@@ -643,7 +698,13 @@ export async function loadSpreadsheetData(spreadsheetId) {
         slideCount: row[3] ? parseInt(row[3]) : 0,
         imageCount: row[4] ? parseInt(row[4]) : 0,
         keywordCount: row[5] ? parseInt(row[5]) : 0,
-        copiedText: row[6] || ''
+        copiedText: row[6] || '',
+        source: row[7] || 'legacy_unverified',
+        previousCheckedAt: row[8] || null,
+        number: row[9] ? parseInt(row[9]) : null,
+        charDiff: row[10] !== undefined && row[10] !== '' ? Number(row[10]) : null,
+        imageDelta: row[11] !== undefined && row[11] !== '' ? Number(row[11]) : null,
+        slideDelta: row[12] !== undefined && row[12] !== '' ? Number(row[12]) : null
       });
     }
   });
@@ -655,11 +716,14 @@ export async function loadSpreadsheetData(spreadsheetId) {
  * 6. 스프레드시트 DB에 분석된 학생 상태 일괄 업데이트
  */
 export async function saveStudentsStatus(spreadsheetId, students) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('Not authenticated');
+  if (!students.length) return;
+  await ensureRecordSchema(spreadsheetId);
 
   // students 시트 로드해서 행 번호 찾아서 덮어쓰거나, 전체 정렬해서 한 번에 덮어쓰기
   // 간단히 students 시트를 헤더를 제외하고 전체 덮어쓰기
-  const range = `students!A2:N${students.length + 1}`;
+  const range = `students!A2:O${students.length + 1}`;
   const values = students.map(s => [
     s.number || '',
     s.name,
@@ -674,7 +738,8 @@ export async function saveStudentsStatus(spreadsheetId, students) {
     s.keywordsUsed ? s.keywordsUsed.join(',') : '',
     s.blankSlideCount,
     s.focusRatio,
-    s.teacherFeedback || ''
+    s.teacherFeedback || '',
+    s.lastCheckedAt || ''
   ]);
 
   await executeWithRetry(() =>
@@ -693,8 +758,10 @@ export async function saveStudentsStatus(spreadsheetId, students) {
  * 7. 스프레드시트 DB에 새로운 활동 로그 추가
  */
 export async function appendActivityLogs(spreadsheetId, logs) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('Not authenticated');
   if (logs.length === 0) return;
+  await ensureRecordSchema(spreadsheetId);
 
   const values = logs.map(l => [
     l.name,
@@ -703,7 +770,13 @@ export async function appendActivityLogs(spreadsheetId, logs) {
     l.slideCount,
     l.imageCount,
     l.keywordCount,
-    l.copiedText || ''
+    l.copiedText || '',
+    l.source || 'legacy_unverified',
+    l.previousCheckedAt || '',
+    l.number || '',
+    l.charDiff ?? '',
+    l.imageDelta ?? '',
+    l.slideDelta ?? ''
   ]);
 
   await executeWithRetry(() =>
@@ -747,6 +820,7 @@ async function getOrCreateRosterSpreadsheet() {
  * 9. 학급 명단 저장 (스프레드시트에 학급 이름 탭 추가/덮어쓰기)
  */
 export async function saveClassRoster(rosterName, students) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('Not authenticated');
   if (!rosterName.trim()) throw new Error('Roster name is required');
 
@@ -854,6 +928,7 @@ export async function loadClassRoster(rosterName) {
  * 12. 특정 학급 명단 삭제 (해당 탭 제거)
  */
 export async function deleteClassRoster(rosterName) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('Not authenticated');
 
   const listResp = await window.gapi.client.drive.files.list({
@@ -915,6 +990,7 @@ export async function deleteClassRoster(rosterName) {
  * 13. 수업 과제 삭제 (학생별 구글 슬라이드 사본 파일들과 DB 스프레드시트를 모두 구글 드라이브 휴지통으로 이동)
  */
 export async function deleteAssignment(spreadsheetId) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('Not authenticated');
 
   try {
@@ -977,6 +1053,7 @@ export async function fetchSlideComments(slideId) {
  * 15. 개별 학생 슬라이드에 원격으로 실시간 교사 피드백 댓글 등록 (학생 슬라이드에 실시간 알림 팝업 전송)
  */
 export async function postSlideComment(slideId, content) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
   if (!slideId) throw new Error('슬라이드 ID가 유효하지 않습니다.');
   if (!content || !content.trim()) throw new Error('댓글 내용을 입력해 주세요.');
@@ -998,6 +1075,7 @@ export async function postSlideComment(slideId, content) {
  * 16. 특정 댓글에 실시간 답글(Reply) 등록
  */
 export async function postSlideReply(slideId, commentId, content) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
   if (!slideId || !commentId) throw new Error('슬라이드 또는 댓글 ID가 유효하지 않습니다.');
   if (!content || !content.trim()) throw new Error('답글 내용을 입력해 주세요.');
@@ -1020,6 +1098,7 @@ export async function postSlideReply(slideId, commentId, content) {
  * 17. 슬라이드 댓글 삭제
  */
 export async function deleteSlideComment(slideId, commentId) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
   if (!slideId || !commentId) throw new Error('슬라이드 또는 댓글 ID가 유효하지 않습니다.');
 
@@ -1037,6 +1116,7 @@ export async function deleteSlideComment(slideId, commentId) {
  * 18. 슬라이드 댓글의 답글(Reply) 삭제
  */
 export async function deleteSlideReply(slideId, commentId, replyId) {
+  assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
   if (!slideId || !commentId || !replyId) throw new Error('슬라이드 또는 댓글/답글 ID가 유효하지 않습니다.');
 

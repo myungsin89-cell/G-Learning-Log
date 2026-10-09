@@ -12,7 +12,7 @@ export default function ClassSelectionPreview() {
     <div className={styles.page}>
       <ClassSelectionHeader preview />
       <main className={styles.main}>
-        <ClassSelection classNames={['5학년 2반', '6학년 1반', '4학년 3반']} preview />
+        <ClassSelection classNames={['5학년 2반', '6학년 1반', '4학년 3반']} preview previewNavigation />
         <p style={{ marginTop: 42, color: '#91a096', fontSize: 11, textAlign: 'center' }}>
           디자인 시안 · 학급 이름은 예시입니다.
         </p>

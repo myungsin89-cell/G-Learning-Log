@@ -1,0 +1,18 @@
+.settings { margin-top: 18px; font-size: 12px; color: #6d7c72; }
+.settings summary { width: fit-content; cursor: pointer; }
+.settings summary:hover { color: #246b55; }
+.config { margin-top: 17px; padding-top: 17px; border-top: 1px solid #e3e9df; }
+.config label { display: block; font-weight: 650; font-size: 12px; margin-bottom: 9px; }
+.config input { display: block; width: 100%; min-width: 0; padding: 11px; border: 1px solid #cddace; border-radius: 8px; color: #20342b; font: inherit; font-size: 12px; }
+.config p { margin-top: 9px; font-size: 11px; line-height: 1.7; color: #758276; }
+.config code { overflow-wrap: anywhere; }
+.primary { margin-top: 13px; border: 1px solid #246b55; background: #246b55; color: white; border-radius: 9px; padding: 11px 15px; font: inherit; font-weight: 650; cursor: pointer; }
+.notice { margin-top: 18px; padding: 12px 14px; border: 1px solid #dce7d9; background: #f2f7ef; border-radius: 9px; color: #246b55; font-size: 12px; line-height: 1.7; }
+.error { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 18px 0; padding: 14px 16px; border: 1px solid #e3c8b4; background: #fff3eb; border-radius: 9px; color: #874327; font-size: 13px; line-height: 1.7; }
+.error button, .floating button { border: 1px solid #d4dfd2; background: #fff; border-radius: 7px; padding: 7px 10px; color: #385441; font: inherit; font-size: 12px; cursor: pointer; }
+.loading { display: flex; align-items: center; gap: 9px; margin: 18px 0; color: #68796e; font-size: 13px; line-height: 1.7; }
+.loading i { width: 14px; height: 14px; border: 2px solid #dce7d9; border-top-color: #246b55; border-radius: 50%; animation: spin 1s linear infinite; }
+.floating { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; flex-wrap: wrap; gap: 10px; z-index: 40; max-width: calc(100vw - 32px); padding: 16px; background: #fff; border: 1px solid #d4dfd2; border-radius: 10px; box-shadow: 0 4px 20px #20342b22; font-size: 13px; }
+.settings summary:focus-visible, .config input:focus-visible, .primary:focus-visible, .error button:focus-visible, .floating button:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 3px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .loading i { animation: none; } }

@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "G배움로그 - 실시간 구글 학습 과정평가 대시보드",
-  description: "구글 슬라이드 및 독스를 활용한 실시간 과정 중심 평가 및 피드백 대시보드",
+  description: "Google 슬라이드 수업의 학생 작업 기록, 교사 피드백과 비공개 메모를 살펴보는 도구",
   icons: {
     icon: '/g-learning-log-line.svg',
     shortcut: '/g-learning-log-line.svg',

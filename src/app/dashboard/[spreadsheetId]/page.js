@@ -18,6 +18,7 @@ import {
 } from '@/lib/googleApi';
 import MadeByStamp from '@/components/MadeByStamp';
 import BrandMark from '@/components/BrandMark';
+import { isTextSurge } from '@/lib/workRecords.mjs';
 
 // Helper to extract new text inserted/pasted by comparing snapshot strings
 function extractDiffText(prev = '', curr = '') {
@@ -467,6 +468,14 @@ export default function Dashboard() {
     };
   }, [sdkStatus, isPolling, students, keywords]);
 
+  useEffect(() => {
+    const resetContinuousCollection = () => {
+      if (document.visibilityState !== 'visible') studentsRef.current.forEach((student) => { student._lastPollCheckedAt = null; });
+    };
+    document.addEventListener('visibilitychange', resetContinuousCollection);
+    return () => document.removeEventListener('visibilitychange', resetContinuousCollection);
+  }, []);
+
   const [loadErrorMsg, setLoadErrorMsg] = useState('');
 
   // Handle Re-login when OAuth token expires
@@ -624,6 +633,17 @@ export default function Dashboard() {
           studentsDataUpdated = true;
         }
 
+        // Save only the difference between states we actually observed. Revision
+        // timestamps do not tell us how many characters were written at each time.
+        const previousCheckedAt = student.lastCheckedAt || null;
+        const observedDiff = previousCheckedAt ? netCharCount - (student.charCount || 0) : null;
+        missingLogs.push({ name: student.name, number: student.number, timestamp: now.toISOString(),
+          previousCheckedAt, source: previousCheckedAt ? 'gap_comparison' : 'first_snapshot',
+          charCount: netCharCount, charDiff: observedDiff, slideCount: stats.slideCount,
+          imageCount: netImageCount, keywordCount: stats.keywordsUsed.length,
+          copiedText: previousCheckedAt ? `지난 확인 이후 글자 수 ${observedDiff > 0 ? '+' : ''}${observedDiff}자` : '첫 기록 확인 · 이전 변화량 미확인' });
+        student.lastCheckedAt = now.toISOString();
+        student._lastPollCheckedAt = null;
         student.charCount = netCharCount;
         student.slideCount = stats.slideCount;
         student.imageCount = netImageCount;
@@ -635,42 +655,7 @@ export default function Dashboard() {
         student.revisionId = stats.revisionId;
         student.fullText = stats.fullText;
 
-        // Backfill offline activities from userRevisions if missing from spreadsheet logs
-        if (hasWorked && userRevisions.length > 0) {
-          const existingTimes = studentLogs.map(l => Math.round(new Date(l.timestamp).getTime() / (60 * 1000)));
-
-          const newRevisions = userRevisions.filter(rev => {
-            const revTimeMinutes = Math.round(new Date(rev.modifiedTime).getTime() / (60 * 1000));
-            return !existingTimes.some(et => Math.abs(et - revTimeMinutes) <= 3);
-          });
-
-          if (newRevisions.length > 0) {
-            const startChar = studentLogs.length > 0 ? studentLogs[studentLogs.length - 1].charCount : 0;
-            const endChar = netCharCount;
-            const charDiff = Math.max(endChar - startChar, 0);
-            const step = newRevisions.length > 0 ? charDiff / newRevisions.length : 0;
-
-            newRevisions.forEach((rev, idx) => {
-              const estimatedChar = Math.round(startChar + step * (idx + 1));
-              const prevEstimatedChar = Math.round(startChar + step * idx);
-              const diff = Math.max(estimatedChar - prevEstimatedChar, 0);
-
-              missingLogs.push({
-                name: student.name,
-                timestamp: rev.modifiedTime,
-                charCount: estimatedChar,
-                slideCount: stats.slideCount,
-                imageCount: netImageCount,
-                keywordCount: stats.keywordsUsed.length,
-                copiedText: diff > 0 
-                  ? `[작성] 슬라이드 본문 작성 (+${diff}자)` 
-                  : (netImageCount > 0 
-                      ? `[편집] 슬라이드 개체 및 이미지 자료 배치` 
-                      : `[편집] 슬라이드 내용 및 서식 수정`)
-              });
-            });
-          }
-        }
+        // Unobserved periods remain gaps; never distribute work across revisions.
       });
 
       // Persist updated students and missing offline logs to Google Spreadsheet DB
@@ -702,7 +687,7 @@ export default function Dashboard() {
         const diff = log.charCount - prevChar;
         restoredLogs.push({
           ...log,
-          charDiff: diff
+          charDiff: log.charDiff ?? (log.source === 'first_snapshot' ? null : diff)
         });
         studentLastChars[log.name] = log.charCount;
       });
@@ -763,7 +748,7 @@ export default function Dashboard() {
         const diff = log.charCount - prevChar;
         restoredLogs.push({
           ...log,
-          charDiff: diff
+          charDiff: log.charDiff ?? (log.source === 'first_snapshot' ? null : diff)
         });
         studentLastChars[log.name] = log.charCount;
       });
@@ -810,6 +795,7 @@ export default function Dashboard() {
 
   // Poll Slide API (4명씩 배치 분할 호출로 구글 API 429/503 할당량 초과 방지)
   const pollStudentSlides = async (customKeywords = null) => {
+    if (document.visibilityState !== 'visible') return;
     if (isPollingBusyRef.current) {
       console.log('Previous polling is still running, skipping tick...');
       return;
@@ -867,7 +853,8 @@ export default function Dashboard() {
 
                 let diffTextSegment = '';
                 // Real-time polling is ~25s. Typing 180+ Korean characters in 25s (~500+ CPM) indicates likely copy-paste.
-                const isPasteSuspicious = charDiff >= 180;
+                const continuous = Boolean(student._lastPollCheckedAt) && document.visibilityState === 'visible';
+                const isPasteSuspicious = isTextSurge({ charDelta: charDiff, previousCheckedAt: student._lastPollCheckedAt, checkedAt: now.toISOString(), continuous });
                 if (isPasteSuspicious) {
                   nextStatus = 'suspicious';
                   diffTextSegment = extractDiffText(prevText, stats.fullText);
@@ -877,7 +864,7 @@ export default function Dashboard() {
 
                 let logSnippet = '';
                 if (isPasteSuspicious && diffTextSegment) {
-                  logSnippet = `[의심] 대량 복붙 의심: "${diffTextSegment.substring(0, 100)}"`;
+                  logSnippet = `[확인 필요] 짧은 확인 간격에 글자 수 ${charDiff}자 증가: "${diffTextSegment.substring(0, 100)}"`;
                 } else if (addedTextSnippet) {
                   logSnippet = `[작성] "${addedTextSnippet}"`;
                 } else if (slideDiff > 0) {
@@ -894,9 +881,14 @@ export default function Dashboard() {
                 if (prevRevisionId && (charDiff !== 0 || slideDiff !== 0 || netImageCount !== prevImageCount)) {
                   newLogs.push({
                     name: student.name,
+                    number: student.number,
+                    source: continuous && (Date.parse(now.toISOString()) - Date.parse(student._lastPollCheckedAt)) <= 60000 ? 'continuous_poll' : 'gap_comparison',
+                    previousCheckedAt: student.lastCheckedAt || null,
                     timestamp: now.toISOString(),
                     charCount: netCharCount,
                     charDiff: charDiff,
+                    imageDelta: netImageCount - prevImageCount,
+                    slideDelta: slideDiff,
                     slideCount: stats.slideCount,
                     imageCount: netImageCount,
                     keywordCount: stats.keywordsUsed.length,
@@ -958,6 +950,8 @@ export default function Dashboard() {
               // Cache in memory for delta comparison on next tick
               student.revisionId = stats.revisionId;
               student.fullText = stats.fullText;
+              student.lastCheckedAt = now.toISOString();
+              student._lastPollCheckedAt = document.visibilityState === 'visible' ? now.toISOString() : null;
 
             } catch (err) {
               console.error(`Error polling slide for ${student.name}:`, err);

@@ -1,0 +1,43 @@
+.dialog { position: fixed; inset: 0; margin: auto; width: min(720px,calc(100vw - 32px)); max-height: calc(100svh - 48px); padding: 0; border: 1px solid #dfe7de; border-radius: 18px; background: #fff; color: #20342b; box-shadow: 0 24px 80px #182e1f33; }
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: #182b1f4d; backdrop-filter: blur(3px); }
+.dialog header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 23px 27px 20px; border-bottom: 1px solid #edf1ec; }
+.dialog header p { color: #688272; font-size: 12px; margin-bottom: 7px; }
+.dialog h2 { font-size: 22px; font-weight: 740; letter-spacing: -.045em; line-height: 1.4; }
+.dialog header > button { width: 35px; height: 35px; border: 0; border-radius: 8px; background: #f4f6f2; color: #68796e; font: inherit; cursor: pointer; }
+.body { padding: 24px 27px; overflow-y: auto; }
+.tabs { display: flex; flex-shrink: 0; gap: 0; padding: 14px 27px 0; border-bottom: 1px solid #edf1ec; }
+.tabs button { flex: 1; padding: 13px 7px; border: 0; border-bottom: 2px solid transparent; background: none; color: #7b8b80; font: inherit; font-size: 13px; cursor: pointer; }
+.tabs .selected { color: #246b55; border-color: #246b55; font-weight: 700; }
+.common { display: flex; align-items: center; gap: 28px; }
+.qr { flex: 0 0 220px; aspect-ratio: 1; }
+.qr img { display: block; width: 100%; height: auto; }
+.instructions { min-width: 0; }
+.instructions h3 { font-size: 23px; font-weight: 720; line-height: 1.6; letter-spacing: -.04em; }
+.instructions p { margin-top: 13px; color: #718277; font-size: 13px; line-height: 1.8; }
+.url { display: block; margin-top: 18px; padding: 11px 13px; border: 1px solid #dfe7de; border-radius: 9px; background: #f8faf7; color: #39735a; text-decoration: none; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+.actions button, .actions a, .primary { display: inline-flex; align-items: center; justify-content: center; padding: 11px 14px; border: 1px solid #dfe7de; border-radius: 9px; background: #fff; color: #496654; text-decoration: none; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.actions .primary, .primary { background: #246b55; border-color: #246b55; color: #fff; }
+.prepare { padding: 20px 0; text-align: center; }
+.prepare strong { font-size: 20px; }
+.prepare p { margin: 17px 0 20px; color: #718277; font-size: 13px; line-height: 1.8; }
+.description { color: #718277; font-size: 13px; line-height: 1.7; }
+.list { margin-top: 18px; max-height: 380px; overflow: auto; }
+.list > div { display: flex; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid #edf1ec; font-size: 13px; }
+.list > div > span { flex: 1; min-width: 0; }
+.list small { display: block; margin-top: 4px; color: #856239; font-size: 11px; line-height: 1.7; }
+.list button, .list a, .preference { border: 0; padding: 0; background: none; color: #39735a; font: inherit; font-size: 12px; text-decoration: none; cursor: pointer; }
+.preference { display: block; margin: 22px 0 0; text-decoration: underline; }
+.message, .error, .localNote { margin-top: 18px; color: #39735a; font-size: 12px; line-height: 1.8; }
+.error, .localNote { color: #856239; }
+.dialog button:disabled { opacity: .5; cursor: wait; }
+.dialog button:focus-visible, .dialog a:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 3px; }
+.large { width: min(1400px,calc(100vw - 48px)); }
+.large .body { padding: 25px 40px; }
+.large .qr { flex-basis: min(48vw,calc(100svh - 330px)); }
+.large .common { gap: 48px; }
+.large .instructions h3 { font-size: clamp(28px,3.4vw,50px); }
+.large .instructions p { font-size: 20px; }
+.large .url { font-size: 16px; }
+@media(max-width:600px) { .dialog header, .body { padding: 20px; } .tabs { padding: 10px 17px 0; } .common { flex-direction: column; gap: 20px; } .qr { flex-basis: auto; width: 210px; } .instructions { width: 100%; text-align: center; } .instructions h3 { font-size: 22px; } .actions > * { flex: 1 0 40%; } .large .body { padding: 20px; } .large .qr { flex-basis: auto; width: 240px; } .large .common { gap: 20px; } .large .instructions p { font-size: 15px; } }

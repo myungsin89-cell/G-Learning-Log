@@ -1,0 +1,23 @@
+.plainButton { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.listActions { display: flex; align-items: center; gap: 15px; }
+.resumeButton { position: relative; z-index: 2; padding: 6px 9px; border: 1px solid #e8d1a4; border-radius: 7px; background: #fff6e9; color: #854e28; font: inherit; font-size: 11px; cursor: pointer; }
+.brandButton { border: 0; padding: 0; background: none; font-family: inherit; cursor: pointer; }
+.headerActions { display: flex; align-items: center; gap: 20px; color: #68796e; font-size: 13px; }
+.headerActions > span { color: #718277; }
+.backButton { margin: 0 0 25px; padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
+.listCount { color: #246b55; background: #e7f0e8; padding: 10px 13px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+.assignmentCover { position: relative; display: grid; place-items: center; margin: 0 20px; height: 180px; overflow: hidden; border: 1px solid #edf1ec; border-radius: 9px; background: #f8faf7; }
+.coverImage { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.coverLabel { position: absolute; bottom: 8px; left: 8px; padding: 5px 8px; border-radius: 5px; background: #ffffffed; color: #617768; font-size: 10px; }
+.coverFallback { display: flex; flex-direction: column; align-items: center; gap: 15px; color: #718277; font-size: 12px; }
+.summaryError { margin-top: 8px; color: #7a847e; font-size: 11px; line-height: 1.6; }
+.rosterToolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; color: #708074; font-size: 13px; }
+.rosterGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.rosterGrid > div { display: flex; align-items: center; gap: 10px; padding: 13px 12px; border: 1px solid #edf1ec; border-radius: 9px; background: #f8faf7; font-size: 13px; }
+.rosterGrid span { min-width: 28px; color: #708074; font-size: 11px; }
+.rosterGrid strong { font-weight: 650; overflow-wrap: anywhere; }
+.noStudents { padding: 30px 0; color: #708074; text-align: center; font-size: 14px; }
+.rosterError { color: #874327; font-size: 13px; line-height: 1.7; }
+.rosterError button { margin-top: 16px; }
+.plainButton:disabled { opacity: .6; cursor: wait; }
+@media(max-width:700px) { .headerActions { gap: 12px; font-size: 12px; } .headerActions > span { display: none; } .rosterGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } .rosterToolbar { align-items: flex-start; flex-direction: column; } }

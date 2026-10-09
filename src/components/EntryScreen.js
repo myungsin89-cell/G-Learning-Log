@@ -1,6 +1,7 @@
 'use client';
 
 import BrandMark from './BrandMark';
+import Link from 'next/link';
 import styles from './EntryScreen.module.css';
 
 function GoogleMark() {
@@ -22,7 +23,7 @@ function ArrowIcon() {
   );
 }
 
-export default function EntryScreen({ onLogin, preview = false, loading = false }) {
+export default function EntryScreen({ onLogin, preview = false, loading = false, children }) {
   return (
     <main className={styles.page}>
       <div className={styles.canvas}>
@@ -64,6 +65,8 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
               <ArrowIcon />
             </button>
 
+            {children}
+
             <div className={styles.supported}>
               Google Drive · Sheets · Slides와 연결됩니다.
             </div>
@@ -87,13 +90,13 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
               </div>
               <div className={styles.step}>
                 <span>02</span>
-                <strong>복붙 의심 내역</strong>
-                <p>짧은 시간에 크게 늘어난 텍스트를 확인합니다.</p>
+                <strong>시간별 작업 변화</strong>
+                <p>언제 얼마나 작업했는지 그래프로 확인합니다.</p>
               </div>
               <div className={styles.step}>
                 <span>03</span>
-                <strong>피드백 필요 학생</strong>
-                <p>작업 흐름을 살펴 도움이 필요한 학생을 찾습니다.</p>
+                <strong>피드백과 교사 메모</strong>
+                <p>학생의 답장을 확인하고 관찰 내용을 남깁니다.</p>
               </div>
             </div>
           </section>
@@ -101,6 +104,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false 
 
         <footer className={styles.footer}>
           <span>made by 초록덕후</span>
+          <nav className={styles.policyLinks} aria-label="서비스 안내"><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용 안내</Link></nav>
           {preview && <span id="preview-note">디자인 시안 · 로그인 버튼은 연결되지 않았습니다.</span>}
         </footer>
       </div>

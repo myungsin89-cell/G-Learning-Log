@@ -114,8 +114,9 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
   const activeStudent = students.find((student) => studentKey(student) === modal?.number);
   const unread = (student) => unreadStudentReplies(threads[studentKey(student)] || [], readAt[studentKey(student)]);
   const inactiveMinutes = (student) => workspace?.inactiveMinutes?.[studentKey(student)] ?? null;
-  const recordingPaused = (student) => Boolean(workspace?.collectionPaused[storeStudentKey(student)]);
-  const collectionControl = activeStudent && workspace ? { paused: recordingPaused(activeStudent), ready: workspace.collectionReady, busy: workspace.collectionBusy.includes(storeStudentKey(activeStudent)), error: workspace.collectionErrors[storeStudentKey(activeStudent)], unsaved: workspace.collectionUnsaved[storeStudentKey(activeStudent)], canChange: Boolean(activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly'), onChange: (paused) => workspace.setStudentCollection(activeStudent, paused) } : null;
+  const monitoringEnded = Boolean(workspace?.monitoringEnded);
+  const recordingPaused = (student) => monitoringEnded || Boolean(workspace?.collectionPaused[storeStudentKey(student)]);
+  const collectionControl = activeStudent && workspace ? { ended: monitoringEnded, paused: recordingPaused(activeStudent), ready: workspace.collectionReady, busy: workspace.collectionBusy.includes(storeStudentKey(activeStudent)) || workspace.monitoringBusy, error: workspace.collectionErrors[storeStudentKey(activeStudent)], unsaved: workspace.collectionUnsaved[storeStudentKey(activeStudent)], canChange: Boolean(!monitoringEnded && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly'), onChange: (paused) => workspace.setStudentCollection(activeStudent, paused) } : null;
   const effectiveStatus = (student) => student.status === 'surge' && ((!readOnly && mode === 'project') || reviewed.includes(studentKey(student))) ? 'active' : student.status;
   const needsReview = students.filter((student) => (effectiveStatus(student) === 'surge' || unread(student) > 0 || inactiveMinutes(student) !== null));
   const filteredStudents = students.filter((student) => (
@@ -218,7 +219,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
       storedExport.definitions.keywords = Array.isArray(workspace.state.settings.keywords) ? '교사가 별도 저장소에 등록한 전체 과제 키워드와 확인 시점별 사용 키워드.' : '기존 저장된 사용 키워드의 합집합. 전체 과제 키워드 수는 미확인.';
       storedExport.definitions.addedAmounts = '새 확인값은 원본 템플릿 기준량을 제외한 수치. 기준량이 미기록된 학생은 기존 추가량을 유지하며 currentCounts에 전체 수치를 따로 제공.';
       storedExport.definitions.teacherMemo = '교사 비공개 저장소에 보관된 메모. 학생 슬라이드와 원본 과제 시트에는 저장하지 않음.';
-      storedExport.newWorkspace = { events: workspace.events, invalidRows: workspace.invalidRows, settings: workspace.state.settings, collectionPaused: workspace.collectionPaused, commentsErrors: workspace.commentsErrors };
+      storedExport.newWorkspace = { events: workspace.events, invalidRows: workspace.invalidRows, settings: workspace.state.settings, monitoringEnded, collectionPaused: workspace.collectionPaused, commentsErrors: workspace.commentsErrors };
       storedExport.students = storedExport.students.map((student) => ({ ...student, teacherMemo: memos[student.id] || '', feedbackReadAt: readAt[student.id] || null, surgeReviewed: reviewed.includes(student.id) }));
     }
     const data = kind === 'csv' ? createSummaryCsv(students, { ...config, readOnly, live: canWrite, keywordsKnown: !readOnly || Array.isArray(workspace?.state.settings.keywords) }) : JSON.stringify(readOnly ? storedExport : createAnalysisExport(config), null, 2);
@@ -241,9 +242,10 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
         <div className={styles.headingText}><p className={styles.context}>{className}<span>Google Slides</span>{!readOnly && <span className={styles.previewLabel}>디자인 시안</span>}</p><h1>{assignment.name}</h1></div>
         {readOnly ? <div className={styles.headingActions}><a className={styles.textAction} href={`https://docs.google.com/spreadsheets/d/${encodeURIComponent(assignment.id)}/edit`} target="_blank" rel="noopener noreferrer">과제 시트 열기</a><button className={styles.primaryButton} onClick={() => setModal({ type: 'student-access' })}><Icon name="students" />학생 접속 안내</button></div> : <button className={styles.primaryButton} onClick={() => setModal({ type: 'join' })}><Icon name="students" /> 학생 접속 안내</button>}
       </div>
-      {readOnly ? <div className={styles.monitorBar}><span className={workspace?.running ? styles.monitorLive : styles.monitorPaused}><i />{workspace?.running ? '수업 확인 중 · 30초 간격' : canWrite ? '수동 확인' : '저장된 기록 보기'}</span><span className={styles.updated}>{workspace?.progress || `${formatCheckedAt(initialData.loadedAt)} 불러옴`}</span><div className={styles.monitorActions}>
+      {readOnly ? <div className={styles.monitorBar}><span className={workspace?.running ? styles.monitorLive : styles.monitorPaused}><i />{monitoringEnded ? '모니터링 종료 · 저장된 기록 보기' : workspace?.running ? '수업 확인 중 · 30초 간격' : canWrite ? '수동 확인' : '저장된 기록 보기'}</span><span className={styles.updated}>{monitoringEnded ? (workspace.monitoringUnsaved ? '종료 상태 저장 필요' : '새 작업 조회 중지') : workspace?.progress || `${formatCheckedAt(initialData.loadedAt)} 불러옴`}</span><div className={styles.monitorActions}>
         {workspace && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && <button disabled={workspace.busy} onClick={() => setModal({ type: 'connect' })}>{canWrite ? '저장 권한 갱신' : 'Google 저장 권한 연결'}</button>}
-        {canWrite && <><button disabled={workspace.busy || workspace.running} onClick={workspace.collect}><Icon name="refresh" size={15} />현재 작업 확인</button><button onClick={workspace.toggleLive}><Icon name={workspace.running ? 'pause' : 'play'} size={15} />{workspace.running ? '수업 확인 중지' : '수업 실시간 확인'}</button></>}
+        {canWrite && !monitoringEnded && <><button disabled={workspace.busy || workspace.running || workspace.monitoringBusy || !workspace.collectionReady} onClick={workspace.collect}><Icon name="refresh" size={15} />현재 작업 확인</button><button disabled={workspace.monitoringBusy || !workspace.collectionReady} onClick={workspace.toggleLive}><Icon name={workspace.running ? 'pause' : 'play'} size={15} />{workspace.running ? '자동 확인 일시 중지' : '수업 실시간 확인'}</button></>}
+        {workspace && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && <button className={styles.monitorEndButton} disabled={workspace.monitoringBusy} onClick={() => workspace.setMonitoringEnded(workspace.monitoringUnsaved || !monitoringEnded)}>{workspace.monitoringBusy ? '상태 저장 중…' : workspace.monitoringUnsaved ? '종료 상태 다시 저장' : monitoringEnded ? '모니터링 재개' : '모니터링 종료'}</button>}
         <button disabled={workspace?.busy || workspace?.running} onClick={onRefresh}>기록 새로고침</button>
       </div></div> : <div className={styles.monitorBar}>
         <span className={paused ? styles.monitorPaused : styles.monitorLive}><i />{paused ? (assignment.closed ? '모니터링 종료' : '모니터링 일시 중지') : '모니터링 중'}</span>
@@ -251,6 +253,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
         <div className={styles.monitorActions}><button onClick={() => { setUpdated('방금 갱신'); setNotice('예시 기록의 표시를 새로고침했습니다.'); }}><Icon name="refresh" size={15} />새로고침</button><button onClick={() => { setPaused((previous) => !previous); setNotice('시안에서는 표시 상태만 변경됩니다.'); }}><Icon name={paused ? 'play' : 'pause'} size={14} />{paused ? '모니터링 재개' : '일시 중지'}</button></div>
       </div>}
       {workspace?.error && <p className={styles.surgeNotice} role="alert">{workspace.error}</p>}
+      {workspace?.monitoringError && <p className={styles.surgeNotice} role="alert">{workspace.monitoringError}</p>}
 
       <section className={styles.overview} aria-label="학급 작업 요약">
         <div className={styles.total}><span>전체 학생</span><strong>{students.length}<small>명</small></strong></div>

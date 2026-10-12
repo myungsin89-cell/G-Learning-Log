@@ -19,8 +19,10 @@
 .monitorLive i { width: 6px; height: 6px; border-radius: 50%; background: #43845c; }
 .monitorPaused { color: #7a877c; } .monitorPaused i { width: 6px; height: 6px; border-radius: 50%; background: #99a39a; }
 .updated { color: #849087; }
-.monitorActions { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+.monitorActions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-left: auto; }
 .monitorActions button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: #68796e; font: inherit; cursor: pointer; padding: 7px 0; }
+.monitorActions .monitorEndButton { border: 1px solid #d4dfd7; border-radius: 7px; background: #f6f8f6; color: #405749; padding: 7px 10px; font-weight: 600; }
+.monitorActions button:disabled { opacity: .5; cursor: default; }
 .idleWatchBar { margin-top: 13px; padding-top: 13px; border-top: 1px solid #e3eae3; }
 .idleWatchToggle { position: relative; display: flex; align-items: flex-start; gap: 9px; color: #496654; font-size: 11px; line-height: 1.7; font-weight: 650; word-break: keep-all; cursor: pointer; }
 .idleWatchToggle input { position: absolute; left: 0; width: 34px; height: 22px; opacity: 0; cursor: pointer; }

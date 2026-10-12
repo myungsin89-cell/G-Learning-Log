@@ -7,6 +7,35 @@ const key = 'slide:student-a';
 const deferred = () => { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; };
 const change = (id, paused) => ({ id, type: 'collection', studentId: key, createdAt: '2026-10-12T02:00:00Z', payload: { paused } });
 
+test('assignment end restores on another device, preserves individual stops, and blocks every student source read', async () => {
+  const saved = foldWorkspace([change('individual-stop', true), { ...change('end'), type: 'settings', studentId: '', payload: { monitoringEnded: true } }]);
+  const gate = new StudentCollectionGate(); gate.restore(saved.collectionPaused, saved.seen, saved.settings.monitoringEnded);
+  for (const studentKey of [key, 'slide:student-b']) {
+    await assert.rejects(gate.read(studentKey, () => assert.fail('Ended assignment must not query student sources')), /모니터링을 종료/);
+  }
+  gate.setEnded(false); gate.confirmEnded('restart', false);
+  assert.equal(gate.ticket(key), null); assert.ok(gate.ticket('slide:student-b'));
+});
+
+test('ending rejects in-flight body and comments even when immediately restarted', async () => {
+  const gate = new StudentCollectionGate(); gate.restore();
+  const body = deferred(), comments = deferred(), first = gate.ticket(key);
+  const pending = Promise.allSettled([gate.read(key, () => body.promise), gate.read('slide:student-b', () => comments.promise)]);
+  gate.setEnded(true); gate.setEnded(false);
+  body.resolve('late body'); comments.resolve('late comments');
+  assert.ok((await pending).every((result) => result.status === 'rejected' && result.reason instanceof CollectionStoppedError));
+  assert.equal(gate.accepts(first), false); assert.ok(gate.ticket(key));
+});
+
+test('failed end persistence and stale hydration cannot resume monitoring; newer saved restart can', () => {
+  const gate = new StudentCollectionGate(); gate.restore(); gate.setEnded(true);
+  gate.restore({}, new Set(), false); assert.equal(gate.ticket(key), null);
+  gate.confirmEnded('own-end', true);
+  gate.restore({}, new Set(), false); assert.equal(gate.ticket(key), null);
+  gate.restore({}, new Set(['own-end', 'later-restart']), false); assert.ok(gate.ticket(key));
+  gate.restore({}, new Set(['own-end', 'later-restart', 'later-end']), true); assert.equal(gate.ticket(key), null);
+});
+
 test('saved pause survives reload without erasing prior snapshots or teacher notes', () => {
   const snapshot = { id: 'old', type: 'snapshot', studentId: key, createdAt: '2026-10-12T01:00:00Z', payload: { checkedAt: '2026-10-12T01:00:00Z', charCount: 10, imageCount: 1, slideCount: 2 } };
   const before = [snapshot, { ...change('note', false), type: 'memo', payload: { text: '보존할 교사 메모' } }, change('stop', true)];

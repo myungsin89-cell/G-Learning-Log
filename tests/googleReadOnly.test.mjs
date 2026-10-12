@@ -260,6 +260,16 @@ test('new assignment covers prefer the frozen distribution template over a stude
   assert.equal(calls[1].pathname, '/v1/presentations/frozen-template');
 });
 
+test('ended assignment does not read a legacy student cover', async () => {
+  const api = createGoogleReader('test', async (address) => {
+    const path = decodeURIComponent(new URL(address).pathname);
+    assert.ok(!path.includes('presentations'), 'No student cover request after monitoring ends');
+    const value = path === '/drive/v3/files' ? { files: [{ id: 'private' }] } : path === '/drive/v3/files/private' ? { ownedByMe: true, appProperties: { sourceSheet: 'assignment' }, permissions: [{ type: 'user', role: 'owner' }] } : { values: [EVENT_HEADERS, eventRow({ id: 'end', type: 'settings', studentId: '', createdAt: '2026-10-12T01:00:00Z', payload: { monitoringEnded: true } })] };
+    return { ok: true, json: async () => value };
+  });
+  assert.equal(await api.loadAssignmentCover({ id: 'assignment', summary: { coverSlideId: 'student' } }), null);
+});
+
 test('missing decks cause no cover calls, while empty or failed thumbnails are explicit', async () => {
   let calls = 0;
   const api = createGoogleReader('test-token', async () => { calls++; return { ok: true, json: async () => ({ slides: [] }) }; });

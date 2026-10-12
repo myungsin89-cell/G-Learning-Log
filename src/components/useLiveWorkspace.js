@@ -22,8 +22,10 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [commentsErrors, setCommentsErrors] = useState({});
   const [collectionPaused, setCollectionPausedState] = useState({}), [collectionReady, setCollectionReady] = useState(false);
   const [collectionBusy, setCollectionBusy] = useState([]), [collectionErrors, setCollectionErrors] = useState({}), [collectionUnsaved, setCollectionUnsaved] = useState({});
+  const [monitoringEnded, setMonitoringEndedState] = useState(false), [monitoringBusy, setMonitoringBusy] = useState(false);
+  const [monitoringUnsaved, setMonitoringUnsaved] = useState(false), [monitoringError, setMonitoringError] = useState('');
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
-    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), collectionBusy: new Set(), studentRevisions: new Map() });
+    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
   const actions = useRef(null);
   const state = foldWorkspace(events);
   const students = mergeWorkspaceStudents(data, state);
@@ -47,9 +49,11 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const hydrate = (result) => {
     refs.current.events = result.events;
     const restored = foldWorkspace(result.events);
-    refs.current.gate.restore(restored.collectionPaused, restored.seen);
+    refs.current.gate.restore(restored.collectionPaused, restored.seen, restored.settings.monitoringEnded === true);
+    if (refs.current.gate.ended()) stopLive();
     if (!refs.current.mounted) return;
     setCollectionPausedState(refs.current.gate.paused()); setCollectionReady(true);
+    setMonitoringEndedState(refs.current.gate.ended());
     setEvents(result.events); setStoreId(result.storeId); setInvalidRows(result.invalidRows);
   };
 
@@ -105,9 +109,38 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     return save('settings', null, { keywords: [...new Set(keywords.map((word) => word.trim()).filter(Boolean))] });
   }
 
+  function stopLive() {
+    const ref = refs.current;
+    ref.live = false; ref.continuous = false; clearTimeout(ref.timer);
+    ref.sessionId = crypto.randomUUID(); ref.studentRevisions.clear(); resetIdleWatch();
+    if (ref.mounted) setRunning(false);
+  }
+  async function setMonitoringEnded(ended) {
+    const ref = refs.current;
+    if (ref.monitoringBusy) return false;
+    ref.monitoringBusy = true; setMonitoringBusy(true); setMonitoringError('');
+    if (ended) {
+      ref.gate.setEnded(true); stopLive(); setMonitoringEndedState(true); setMonitoringUnsaved(true);
+    }
+    try {
+      if (!ref.api && !await connect({ purpose: 'privacy' })) throw new Error('Google 저장 권한을 연결해 주세요.');
+      const control = event('settings', null, { monitoringEnded: ended });
+      const saved = await ref.api.append([control]);
+      // Resume only after persistence; restarting never starts an automatic cycle.
+      if (!ended) { ref.gate.setEnded(false); stopLive(); }
+      ref.gate.confirmEnded(control.id, ended); hydrate(saved);
+      setMonitoringUnsaved(false);
+      setProgress(ended ? '모니터링 종료 · 저장된 기록 보기' : '모니터링 재개 · 현재 작업 확인을 눌러 시작하세요.');
+      return true;
+    } catch (err) {
+      if (ref.mounted) setMonitoringError(`${ended ? '이 화면의 조회는 멈췄지만 종료 상태를 저장하지 못했습니다. 새로고침 전에 다시 저장해 주세요. ' : '모니터링 종료 상태를 유지합니다. '}${err.message}`);
+      return false;
+    } finally { ref.monitoringBusy = false; if (ref.mounted) setMonitoringBusy(false); }
+  }
+
   async function setStudentCollection(student, paused) {
     const ref = refs.current, key = storeStudentKey(student);
-    if (!key || ref.collectionBusy.has(key)) return false;
+    if (!key || ref.collectionBusy.has(key) || ref.gate.ended() || ref.monitoringBusy) return false;
     ref.collectionBusy.add(key); setCollectionBusy([...ref.collectionBusy]);
     setCollectionErrors((previous) => ({ ...previous, [key]: '' }));
     if (paused) {
@@ -149,7 +182,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     if (!refs.current.api) { setError('Google 저장 권한을 연결해 주세요.'); return false; }
     setError('');
     try {
-      if (!refs.current.gate.ticket(storeStudentKey(student))) throw new CollectionStoppedError(refs.current.gate.ready);
+      if (!refs.current.gate.ticket(storeStudentKey(student))) throw new CollectionStoppedError(refs.current.gate.ready, refs.current.gate.ended());
       await refs.current.api.feedback(student.slideId, content, commentId);
     } catch (err) { setError(`${err.message} 같은 글을 다시 보내기 전에 댓글을 새로고침해 확인해 주세요.`); return false; }
     try { await refreshComments(student); }
@@ -159,7 +192,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
 
   async function collect() {
     const ref = refs.current;
-    if (!ref.api || !ref.gate.ready || ref.collecting || document.visibilityState !== 'visible') return;
+    if (!ref.api || !ref.gate.ready || ref.gate.ended() || ref.monitoringBusy || ref.collecting || document.visibilityState !== 'visible') return;
     ref.collecting = true; setBusy(true); setError('');
     const interruptedSession = ref.sessionId, wasContinuous = ref.continuous;
     const watchRevision = ref.watchRevision;
@@ -177,7 +210,8 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
           const student = chunk[offset];
           if (result.status === 'fulfilled') {
             const { data: presentation, ticket } = result.value;
-            const item = event('snapshot', student, makeObservation(presentation, previousState.snapshots[storeStudentKey(student)], { sessionId: interruptedSession, continuous: wasContinuous && ref.studentRevisions.get(ticket.key) === ticket.revision, keywords }));
+            const revision = `${ticket.monitoringRevision}:${ticket.revision}`;
+            const item = event('snapshot', student, makeObservation(presentation, previousState.snapshots[storeStudentKey(student)], { sessionId: interruptedSession, continuous: wasContinuous && ref.studentRevisions.get(ticket.key) === revision, keywords }));
             pending.push(item); tickets.set(item.id, ticket);
           } else if (!(result.reason instanceof CollectionStoppedError)) failed.push(`${student.number ? `${student.number}번 ` : ''}${student.name}: ${result.reason.message}`);
         });
@@ -189,7 +223,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
         hydrate(saved);
         const ids = new Set(saved.events.map((item) => item.id));
         collected = pending.filter((item) => ids.has(item.id) && ref.gate.accepts(tickets.get(item.id)));
-        for (const item of collected) { const ticket = tickets.get(item.id); ref.studentRevisions.set(ticket.key, ticket.revision); }
+        for (const item of collected) { const ticket = tickets.get(item.id); ref.studentRevisions.set(ticket.key, `${ticket.monitoringRevision}:${ticket.revision}`); }
       }
       if (!ref.mounted || document.visibilityState !== 'visible' || ref.sessionId !== interruptedSession) return;
       ref.continuous = true;
@@ -213,6 +247,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     } finally { ref.collecting = false; if (ref.mounted) setBusy(false); }
   }
   function toggleLive() {
+    if (!refs.current.api || !refs.current.gate.ready || refs.current.gate.ended() || refs.current.monitoringBusy) return;
     refs.current.sessionId = crypto.randomUUID(); refs.current.continuous = false;
     refs.current.live = !refs.current.live;
     resetIdleWatch(); setRunning(refs.current.live);
@@ -222,9 +257,9 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     const ref = refs.current;
     let cancelled = false;
     async function cycle() {
-      if (cancelled || document.visibilityState !== 'visible') return;
+      if (cancelled || !ref.live || ref.gate.ended() || document.visibilityState !== 'visible') return;
       await actions.current.collect();
-      if (!cancelled) refs.current.timer = setTimeout(cycle, 30000);
+      if (!cancelled && ref.live && !ref.gate.ended()) refs.current.timer = setTimeout(cycle, 30000);
     }
     function visibility() {
       clearTimeout(refs.current.timer);
@@ -238,6 +273,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   }, [running, resetIdleWatch]);
 
   return { enabled, running, busy, progress, error, storeId, invalidRows, events, state, students,
+    monitoringEnded, monitoringBusy, monitoringUnsaved, monitoringError, setMonitoringEnded,
     collectionPaused, collectionReady, collectionBusy, collectionErrors, collectionUnsaved, setStudentCollection, inspectPresentation,
     idleWatchEnabled, toggleIdleWatch,
     inactiveMinutes: Object.fromEntries(students.map((student) => [student.id,

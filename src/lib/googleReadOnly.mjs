@@ -106,7 +106,10 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       if (!slideId) return null;
       if (source === 'student') {
         const workspace = await createGoogleReader(accessToken, fetcher).loadWorkspace(assignment.id);
-        if (workspace && foldWorkspace(workspace.events).collectionPaused[`slide:${slideId}`]) return null;
+        if (workspace) {
+          const state = foldWorkspace(workspace.events);
+          if (state.settings.monitoringEnded || state.collectionPaused[`slide:${slideId}`]) return null;
+        }
       }
       // Only one representative deck, with page IDs only; never poll all student slides.
       const presentation = await get('slides', `presentations/${encodeURIComponent(slideId)}`, [['fields', 'slides(objectId)']]);

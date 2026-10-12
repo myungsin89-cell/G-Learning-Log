@@ -122,6 +122,27 @@ test('shared or unknown-format stores stop before any writes', async () => {
   }
 });
 
+test('saved assignment end blocks all queued snapshots while retaining history, notes and per-student controls', async () => {
+  const { fetcher } = mockGoogle({ existing: true });
+  const api = createGoogleWorkspace('token', assignment, [student], fetcher);
+  await api.initialize();
+  const snapshot = (id, time, key) => event(id, 'snapshot', makeObservation(observation(time), null, { sessionId: 'test' }), key);
+  await api.append([snapshot('history', '2026-10-12T00:00:00Z'), event('stop-one', 'collection', { paused: true })]);
+  await api.append([event('end', 'settings', { monitoringEnded: true }, '')]);
+  const after = await api.append([snapshot('blocked-one', '2026-10-12T01:00:00Z'), snapshot('blocked-two', '2026-10-12T01:00:00Z', 'slide:other'), event('memo', 'memo', { text: '수업 후 메모' })]);
+  assert.ok(!after.events.some(({ id }) => id.startsWith('blocked')));
+  const restored = foldWorkspace(after.events);
+  assert.equal(restored.records['slide:student-slide'].length, 1); assert.equal(restored.memos['slide:student-slide'], '수업 후 메모');
+  assert.equal(restored.settings.monitoringEnded, true);
+  // A fresh client sees the same state and cannot append a snapshot.
+  const second = createGoogleWorkspace('other-token', assignment, [student], fetcher); await second.initialize();
+  assert.ok(!(await second.append([snapshot('other-device', '2026-10-12T02:00:00Z', 'slide:other')])).events.some(({ id }) => id === 'other-device'));
+  await second.append([event('restart', 'settings', { monitoringEnded: false }, '')]);
+  const resumed = await second.append([snapshot('still-paused', '2026-10-12T03:00:00Z'), snapshot('resumed-other', '2026-10-12T03:00:00Z', 'slide:other')]);
+  assert.ok(!resumed.events.some(({ id }) => id === 'still-paused'));
+  assert.ok(resumed.events.some(({ id }) => id === 'resumed-other'));
+});
+
 test('a teacher memo can be saved independently with no snapshots or student-facing writes', async () => {
   const { fetcher, state } = mockGoogle({ existing: true });
   const api = createGoogleWorkspace('token', assignment, [student], fetcher);

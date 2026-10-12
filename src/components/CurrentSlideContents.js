@@ -11,7 +11,7 @@ export default function CurrentSlideContents({ student, state, onRefresh, paused
     {state?.loading && <p className={styles.smallNote} role="status">현재 슬라이드를 읽는 중입니다.{data ? ' 아래는 이전에 확인한 내용입니다.' : ''}</p>}
     {state?.error && <p className={styles.slideError} role="alert">{state.error}{data ? ' 아래는 이전에 확인한 내용입니다.' : ''}</p>}
     {!student.slideId && <p className={styles.smallNote}>저장된 슬라이드 주소가 없어 내용을 읽을 수 없습니다.</p>}
-    {student.slideId && !state && <p className={styles.smallNote}>‘슬라이드 글 불러오기’를 누르면 현재 작성된 글을 가져옵니다.</p>}
+    {student.slideId && !state && !paused && <p className={styles.smallNote}>‘슬라이드 글 불러오기’를 누르면 현재 작성된 글을 가져옵니다.</p>}
     {data && <>
       <p className={styles.slideReadTime}>{formatCheckedAt(data.checkedAt)} 확인 · {data.title}</p>
       <div className={styles.currentSlideMetrics}><span>현재 전체 글자 <strong>{formatAmount(data.charCount)}자</strong></span><span>슬라이드 <strong>{formatAmount(data.slideCount)}장</strong></span><span>현재 전체 이미지 <strong>{formatAmount(data.imageCount)}개</strong></span></div>

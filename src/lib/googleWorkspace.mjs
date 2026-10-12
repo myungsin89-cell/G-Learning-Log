@@ -62,10 +62,10 @@ export function createGoogleWorkspace(accessToken, assignment, students, fetcher
       return locked(async () => {
         await assertPrivate();
         const saved = await readEvents(), ids = new Set(saved.events.map((event) => event.id));
-        const paused = foldWorkspace(saved.events).collectionPaused;
+        const restored = foldWorkspace(saved.events), paused = restored.collectionPaused;
         // Recheck after waiting for the queue and private-store network reads,
         // immediately before POST. A POST already sent cannot be recalled.
-        const pending = events.filter((event) => !ids.has(event.id) && (event.type !== 'snapshot' || !paused[event.studentId]) && shouldInclude(event));
+        const pending = events.filter((event) => !ids.has(event.id) && (event.type !== 'snapshot' || (!restored.settings.monitoringEnded && !paused[event.studentId])) && shouldInclude(event));
         if (!pending.length) return { storeId, ...saved };
         const rows = pending.map(eventRow);
         try {

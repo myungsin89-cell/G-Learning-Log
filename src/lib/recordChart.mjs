@@ -74,11 +74,23 @@ export function compactChartBins(bins, limit = 48) {
 
 // Compare each format on its own terms before placing the results on one timeline.
 // A new snapshot never subtracts a legacy count with a different counting basis.
-export function studentActivityTimeline(records, baseline = null) {
+export function activityGrouping(duration) {
+  const minute = 60000, day = 86400000;
+  const choices = [[30 * minute, 3 * minute, '3분'], [120 * minute, 5 * minute, '5분'], [360 * minute, 10 * minute, '10분'], [day, 30 * minute, '30분'], [2 * day, 60 * minute, '1시간'], [48 * day, day, '하루'], [96 * day, 2 * day, '2일'], [336 * day, 7 * day, '7일']];
+  const selected = choices.find(([maximum]) => duration <= maximum);
+  if (selected) return { intervalMs: selected[1], label: selected[2] };
+  const days = Math.ceil(duration / day / 48);
+  return { intervalMs: days * day, label: `${days}일` };
+}
+
+export function studentActivityTimeline(records, baseline = null, { rangeMs = null } = {}) {
   const rows = records.filter((record) => dated(record.checkedAt)).slice().sort((a, b) => Date.parse(a.checkedAt) - Date.parse(b.checkedAt));
   if (!rows.length) return { bins: [], start: null, end: null };
   const legacy = ['charCount', 'imageCount', 'slideCount'].map((metric) => new Map(legacyChangeBins(rows, metric, 'record', baseline).map((bin) => [bin.records[0], bin.comparisons[0]])));
-  const short = Date.parse(rows.at(-1).checkedAt) - Date.parse(rows[0].checkedAt) <= 48 * 3600000;
+  const end = Date.parse(rows.at(-1).checkedAt);
+  const start = Math.max(Date.parse(rows[0].checkedAt), Number.isFinite(rangeMs) && rangeMs > 0 ? end - rangeMs : -Infinity);
+  const grouping = activityGrouping(end - start);
+  const short = grouping.intervalMs < 86400000;
   const groups = new Map();
   let previousSnapshot = null;
   for (const record of rows) {
@@ -102,21 +114,26 @@ export function studentActivityTimeline(records, baseline = null) {
       for (const page of before.values()) pages.push({ number: page.number, kind: 'removed' });
     }
     if (!comparisons) previousSnapshot = record;
+    if (Date.parse(record.checkedAt) < start) continue;
     // Initial states and unchanged checks are not student work bars.
     if (!deltas.some((value) => Number.isFinite(value) && value !== 0) && !pages.length) continue;
-    const date = dayKey.format(new Date(record.checkedAt));
-    const bucket = short ? Math.floor(Date.parse(record.checkedAt) / 1200000) : date;
+    // Use fixed clock boundaries in Korea. Never regroup by number of records:
+    // sparse observations must retain the empty time between them.
+    const bucket = Math.floor((Date.parse(record.checkedAt) + 9 * 3600000) / grouping.intervalMs);
     const id = `activity:${bucket}`;
-    const label = new Date(record.checkedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', ...(short ? { hour: '2-digit', minute: '2-digit', hour12: false } : {}) });
-    if (!groups.has(id)) groups.set(id, { id, label, start: previous?.checkedAt || record.previousCheckedAt || record.checkedAt, end: record.checkedAt, added: 0, removed: 0, imageAdded: 0, imageRemoved: 0, slideAdded: 0, slideRemoved: 0, textUncertain: false, records: [], activities: [] });
+    const labelTime = (value) => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', ...(short ? { hour: '2-digit', minute: '2-digit', hour12: false } : {}) });
+    const label = labelTime(record.checkedAt);
+    if (!groups.has(id)) groups.set(id, { id, label, plotAt: new Date(Math.min(end, Math.max(start, (bucket + .5) * grouping.intervalMs - 9 * 3600000))).toISOString(), start: previous?.checkedAt || record.previousCheckedAt || record.checkedAt, end: record.checkedAt, added: 0, removed: 0, imageAdded: 0, imageRemoved: 0, slideAdded: 0, slideRemoved: 0, textUncertain: false, records: [], activities: [] });
     const bin = groups.get(id);
     bin.end = record.checkedAt;
+    const firstLabel = bin.records.length ? labelTime(bin.records[0].checkedAt) : label;
+    bin.label = firstLabel === label ? label : `${firstLabel}–${label}`;
     bin.textUncertain ||= textUncertain;
     ['added', 'imageAdded', 'slideAdded'].forEach((field, index) => { bin[field] += Math.max(0, deltas[index] || 0); });
     ['removed', 'imageRemoved', 'slideRemoved'].forEach((field, index) => { bin[field] += Math.max(0, -(deltas[index] || 0)); });
     bin.records.push(record);
     bin.activities.push({ record, previousCheckedAt: previous?.checkedAt || record.previousCheckedAt, deltas, pages, textUncertain, templateAdjusted: comparisons?.some((item) => item?.templateAdjusted) || false });
   }
-  const bins = compactChartBins([...groups.values()]);
-  return { bins, start: rows[0].checkedAt, end: rows.at(-1).checkedAt, textUncertain: rows.some(estimatedLegacy) || bins.some((bin) => bin.textUncertain) };
+  const bins = [...groups.values()];
+  return { bins, start: start === Date.parse(rows[0].checkedAt) ? rows[0].checkedAt : new Date(start).toISOString(), end: rows.at(-1).checkedAt, grouping, textUncertain: rows.some(estimatedLegacy) || bins.some((bin) => bin.textUncertain) };
 }

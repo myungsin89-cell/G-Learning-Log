@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compactChartBins, legacyChangeBins, studentActivityTimeline } from '../src/lib/recordChart.mjs';
+import { activityGrouping, compactChartBins, legacyChangeBins, studentActivityTimeline } from '../src/lib/recordChart.mjs';
 import { makeObservation } from '../src/lib/liveWorkRecords.mjs';
 
 const baseline = { chars: 1430, images: 41, slides: 10, recordedAt: '2026-09-07T04:46:38Z' };
@@ -120,4 +120,43 @@ test('new whole-count observations capture writing even while totals remain belo
   assert.equal(bins[0].added, 100); assert.equal(bins[0].imageAdded, 1);
   assert.equal(bins[0].textUncertain, false);
   assert.deepEqual(bins[0].activities[0].pages, [{ number: 1, kind: 'changed', chars: 100, images: 1 }]);
+});
+
+test('fifteen minutes of work use three-minute bars rather than one twenty-minute bar', () => {
+  const records = [{ id: 'first', source: 'first_snapshot', checkedAt: '2026-10-12T00:00:00Z', charCount: 300 },
+    ...Array.from({ length: 30 }, (_, index) => ({ id: `r${index}`, source: 'continuous_poll',
+      previousCheckedAt: new Date(Date.parse('2026-10-12T00:00:00Z') + index * 30000).toISOString(),
+      checkedAt: new Date(Date.parse('2026-10-12T00:00:00Z') + (index + 1) * 30000).toISOString(),
+      charDelta: 10, imageDelta: 0, slideDelta: 0 }))];
+  const original = JSON.stringify(records), timeline = studentActivityTimeline(records);
+  assert.equal(timeline.grouping.label, '3분');
+  // The last check falls on the next clock boundary.
+  assert.equal(timeline.bins.length, 6);
+  assert.equal(timeline.bins.reduce((sum, bin) => sum + bin.added, 0), 300);
+  assert.equal(timeline.bins.flatMap((bin) => bin.activities).length, 30);
+  assert.equal(JSON.stringify(records), original);
+});
+
+test('grouping expands with elapsed time and recent viewing recovers detailed records', () => {
+  for (const [minutes, label] of [[30, '3분'], [31, '5분'], [120, '5분'], [121, '10분'], [1440, '30분'], [2880, '1시간'], [2881, '하루']]) {
+    assert.equal(activityGrouping(minutes * 60000).label, label);
+  }
+  const records = [{ id: 'first', source: 'first_snapshot', checkedAt: '2026-10-01T00:00:00Z' },
+    { id: 'older', source: 'gap_comparison', previousCheckedAt: '2026-10-01T00:00:00Z', checkedAt: '2026-10-10T00:00:00Z', charDelta: 50 },
+    { id: 'recent', source: 'continuous_poll', previousCheckedAt: '2026-10-10T00:00:00Z', checkedAt: '2026-10-10T00:00:30Z', charDelta: 10, pages: [] }];
+  const all = studentActivityTimeline(records), recent = studentActivityTimeline(records, null, { rangeMs: 30 * 60000 });
+  assert.equal(all.grouping.label, '하루'); assert.equal(recent.grouping.label, '3분');
+  assert.equal(recent.start, '2026-10-09T23:30:30.000Z');
+  assert.deepEqual(recent.bins.flatMap((bin) => bin.activities).map((activity) => activity.record.id), ['older', 'recent']);
+  assert.equal(recent.bins[0].activities[0].previousCheckedAt, records[1].previousCheckedAt);
+  assert.equal(all.bins.reduce((sum, bin) => sum + bin.added, 0), 60);
+});
+
+test('daily grouping follows Korean midnight and keeps sparse dates apart', () => {
+  const records = [{ id: 'first', source: 'first_snapshot', checkedAt: '2026-10-01T00:00:00Z' },
+    { id: 'before', source: 'gap_comparison', previousCheckedAt: '2026-10-01T00:00:00Z', checkedAt: '2026-10-04T14:59:00Z', charDelta: 20 },
+    { id: 'after', source: 'gap_comparison', previousCheckedAt: '2026-10-04T14:59:00Z', checkedAt: '2026-10-04T15:01:00Z', charDelta: 30 }];
+  const timeline = studentActivityTimeline(records);
+  assert.equal(timeline.grouping.label, '하루'); assert.equal(timeline.bins.length, 2);
+  assert.deepEqual(timeline.bins.map((bin) => bin.added), [20, 30]);
 });

@@ -79,14 +79,22 @@
 .studentFilters button { padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: #7c887e; font: inherit; font-size: 11px; cursor: pointer; }
 .studentFilters .selectedFilter { background: #e7f0e8; color: #246b55; font-weight: 750; }
 .studentGrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); gap: 13px; }
-.studentCard { display: block; width: 100%; min-width: 0; padding: 17px 17px 11px; border: 1px solid #e1e9e1; border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.studentCard:hover { border-color: #9bbfa6; background: #fdfefd; }
-.surgeCard { border-color: #d9bea0; }
+.studentCard { --status-edge: #bac5bd; display: block; width: 100%; min-width: 0; padding: 17px 17px 11px; border: 1px solid #e1e9e1; border-top: 3px solid var(--status-edge); border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.studentCard:hover { border-color: #9bbfa6; border-top-color: var(--status-edge); background: #fdfefd; }
+.studentCard:focus-visible { outline: 2px solid #246b55; outline-offset: 3px; }
+.cardactive { --status-edge: #478563; } .cardidle { --status-edge: #b89a60; } .cardsurge { --status-edge: #bd7c42; }
+.cardpaused, .cardunstarted { --status-edge: #bac5bd; }
 .studentCardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.studentCardHeader > strong { font-size: 14px; font-weight: 740; letter-spacing: -.04em; }
+.studentIdentity { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.studentIdentity > strong { font-size: 14px; font-weight: 740; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.replyCount { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 12px; background: #d93535; color: #fff; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 5px; font-size: 9px; font-weight: 650; white-space: nowrap; }
 .status i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .status.active { background: #edf5ee; color: #538161; } .status.idle { background: #fbf5e7; color: #a58b55; } .status.surge { background: #faf0e8; color: #b17c53; } .status.unstarted { background: #f0f3ef; color: #8a958c; }
+.status.paused { background: #f0f3ef; color: #637168; }
+.studentCardHeader .status { font-size: 11px; font-weight: 700; padding: 5px 7px; }
+.studentCardHeader .status i { width: 6px; height: 6px; }
+.studentCardHeader .active { color: #2e6b47; } .studentCardHeader .idle { color: #806529; } .studentCardHeader .surge { color: #935820; } .studentCardHeader .unstarted { color: #637168; }
 .metrics { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 8px; margin-top: 22px; }
 .metrics > span > strong { display: block; white-space: nowrap; font-size: 22px; font-weight: 680; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
 .metrics em { margin-left: 3px; color: #819087; font-style: normal; font-size: 10px; font-weight: 500; }
@@ -162,7 +170,7 @@
 .cardInterval { display: block; font-size: 10px; line-height: 1.6; color: #718579; }
 .studentCardFooter { border: 0; padding-top: 0; gap: 5px; flex-wrap: wrap; }
 .studentCardFooter small { font-size: 10px; color: #718579; }
-.unreadBadge { color: #246b55; background: #edf5ee; padding: 3px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+.unreadBadge { color: #b52929; background: #fff1f1; padding: 3px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; }
 .replyMuted { color: #718579; font-size: 10px; }
 .textAction { border: 0; background: none; color: #246b55; font: inherit; font-size: 12px; font-weight: 650; padding: 8px 0; cursor: pointer; }
 .recordListControls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e3eae3; }
@@ -172,7 +180,7 @@
 .collectionControl h3 { font-size: 14px; }
 .exportActions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .reportScope { margin-bottom: 17px; color: #617768; font-size: 12px; line-height: 1.8; }
-.tableUnread { display: block; margin-top: 5px; color: #246b55; font-size: 10px; }
+.tableUnread { display: block; margin-top: 5px; color: #b52929; font-size: 10px; }
 .report .memoPreview { max-width: 170px; white-space: normal; text-align: left; overflow-wrap: anywhere; font-weight: 450; line-height: 1.7; }
 .surgeFlag { color: #9c623b !important; font-size: 11px; }
 .surgeNotice { margin-top: 12px; padding: 14px; border-radius: 10px; background: #faf3eb; color: #865a3b; font-size: 12px; line-height: 1.8; }
@@ -223,6 +231,17 @@
 .activityGraphDialog button:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 3px; }
 .activityGraphBody { padding: 24px 26px 28px; }
 .activityGraphIntro { margin: 0 0 17px; font-size: 14px; color: #617768; }
+.graphRanges { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+.graphRanges button { padding: 7px 11px; border: 1px solid #dfe7de; border-radius: 7px; background: #fff; color: #496654; font: inherit; font-size: 12px; cursor: pointer; }
+.graphRanges button[aria-pressed="true"] { background: #365c45; border-color: #365c45; color: #fff; }
+.graphRanges small { color: #718579; font-size: 11px; }
+.graphExplanation { margin-top: 13px; border-top: 1px solid #e1e9e1; font-size: 12px; color: #496654; }
+.graphExplanation summary { padding: 11px 0; font-weight: 700; cursor: pointer; }
+.graphExplanation > div { padding: 0 0 8px; }
+.graphExplanation p { margin: 0 0 12px; line-height: 1.8; word-break: keep-all; }
+.graphExplanation table { width: 100%; margin: 10px 0 15px; border-collapse: collapse; text-align: left; }
+.graphExplanation th, .graphExplanation td { padding: 7px 10px; border-bottom: 1px solid #e3eae3; }
+.graphExplanation th { background: #f2f6f2; font-weight: 700; }
 .activityGraphLayout { display: grid; grid-template-columns: minmax(0,1fr) 285px; align-items: start; gap: 25px; }
 .activityGraphLayout .activityPlot { background: #fcfdfb; border: 1px solid #dfe7de; border-radius: 11px; }
 .activityPointDetails { border-left: 1px solid #e3eae3; padding-left: 23px; }
@@ -308,7 +327,7 @@
   .keywordPanel { padding-top: 14px; padding-bottom: 17px; } .keywordPanel .panelDescription { display: none; } .keywordChips { margin-top: 9px; }
   .observationNote { font-size: 10px; } .studentHeading { align-items: flex-start; flex-direction: column; gap: 13px; } .search { width: 100%; }
   .studentGrid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .studentCard { padding: 13px 12px 8px; }
-  .studentCardHeader { flex-wrap: wrap; gap: 7px; } .studentCardHeader > strong { font-size: 13px; } .metrics { gap: 5px; margin-top: 19px; }
+  .studentCardHeader { flex-wrap: wrap; gap: 7px; } .studentIdentity > strong { font-size: 13px; } .metrics { gap: 5px; margin-top: 19px; }
   .metrics > span > strong { font-size: 18px; } .metrics small { font-size: 8px; } .metrics em { font-size: 8px; margin-left: 1px; }
   .cardKeywords { gap: 5px; } .keywordDots { display: none; } .studentCardFooter { flex-wrap: wrap; gap: 4px; } .sparkline { width: 50px; height: 18px; }
   .drawer { border-radius: 0; } .modalHeader, .modalBody, .drawerBody { padding-left: 21px; padding-right: 21px; }

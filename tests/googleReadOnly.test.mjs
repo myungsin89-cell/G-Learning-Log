@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createGoogleReader, READ_ONLY_SCOPES } from '../src/lib/googleReadOnly.mjs';
 import { adaptStoredAssignment, adaptDriveComments, createStoredAnalysisExport, summarizeStudentCard, storedHistoryBins } from '../src/lib/storedWorkRecords.mjs';
 import { createSummaryCsv, unreadStudentReplies } from '../src/lib/workRecords.mjs';
+import { EVENT_HEADERS, eventRow } from '../src/lib/liveWorkRecords.mjs';
 
 const studentHeaders = ['number', 'name', 'slide_id', 'slide_url', 'status', 'last_active_at', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'keywords_used', 'blank_slide_count', 'focus_ratio', 'teacher_feedback'];
 const logHeaders = ['name', 'timestamp', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'copied_text', 'record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'];
@@ -225,13 +226,24 @@ test('legacy assignment cover reads only the first page of one linked student de
   const cover = await api.loadAssignmentCover(assignment);
   assert.equal(cover.source, 'student');
   assert.equal(cover.url, 'https://lh3.googleusercontent.com/first-page');
-  assert.equal(calls.length, 2);
-  assert.equal(calls[0].url.pathname, '/v1/presentations/one-deck');
-  assert.equal(calls[0].url.searchParams.get('fields'), 'slides(objectId)');
-  assert.equal(calls[1].url.pathname, '/v1/presentations/one-deck/pages/first-page/thumbnail');
-  assert.equal(calls[1].url.searchParams.get('thumbnailProperties.thumbnailSize'), 'MEDIUM');
+  assert.equal(calls.length, 3); // Private pause-state lookup, then one presentation and one thumbnail.
+  assert.equal(calls[1].url.pathname, '/v1/presentations/one-deck');
+  assert.equal(calls[1].url.searchParams.get('fields'), 'slides(objectId)');
+  assert.equal(calls[2].url.pathname, '/v1/presentations/one-deck/pages/first-page/thumbnail');
+  assert.equal(calls[2].url.searchParams.get('thumbnailProperties.thumbnailSize'), 'MEDIUM');
   assert.ok(calls.every(({ options }) => options.method === 'GET'));
   assert.equal(JSON.stringify(assignment), snapshot);
+});
+
+test('a stopped student is never queried for a legacy assignment cover', async () => {
+  const calls = [];
+  const api = createGoogleReader('test', async (address) => {
+    const path = decodeURIComponent(new URL(address).pathname); calls.push(path);
+    const value = path === '/drive/v3/files' ? { files: [{ id: 'private' }] } : path === '/drive/v3/files/private' ? { ownedByMe: true, appProperties: { sourceSheet: 'assignment' }, permissions: [{ type: 'user', role: 'owner' }] } : { values: [EVENT_HEADERS, eventRow({ id: 'stop', type: 'collection', studentId: 'slide:stopped', createdAt: '2026-10-12T01:00:00Z', payload: { paused: true } })] };
+    return { ok: true, json: async () => value };
+  });
+  assert.equal(await api.loadAssignmentCover({ id: 'assignment', summary: { coverSlideId: 'stopped' } }), null);
+  assert.ok(calls.every((path) => !path.includes('presentations')));
 });
 
 test('new assignment covers prefer the frozen distribution template over a student deck', async () => {

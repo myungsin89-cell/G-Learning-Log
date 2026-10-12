@@ -3,8 +3,8 @@ import BrandMark from './BrandMark';
 import styles from './PublicInfoPage.module.css';
 
 export function SupportContact() {
-  const email = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
-  return <p>{email ? <>문의: <a href={`mailto:${email}`}>{email}</a></> : '문의는 Google 로그인 화면의 앱 정보에 표시되는 지원 이메일로 보내 주세요.'}</p>;
+  const email = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || 'myungsin89@gmail.com';
+  return <p>문의·개인정보 요청: <a href={`mailto:${email}`}>{email}</a></p>;
 }
 
 export default function PublicInfoPage({ title, children }) {

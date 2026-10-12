@@ -1,0 +1,38 @@
+export class CollectionStoppedError extends Error {
+  constructor(ready) { super(ready ? '기록 중지 학생입니다. 재개하면 새 작업과 댓글을 확인할 수 있습니다.' : '학생별 기록 중지 상태를 먼저 확인해야 합니다. 저장 권한 연결 또는 새로고침으로 다시 확인해 주세요.'); this.name = 'CollectionStoppedError'; }
+}
+
+// Revisions reject an old response even if a student was paused and resumed
+// before that response arrived. Local choices survive older hydration results.
+export class StudentCollectionGate {
+  ready = false;
+  saved = {};
+  overrides = new Map();
+  barriers = new Map();
+  revisions = new Map();
+  restore(saved = {}, seen = new Set()) {
+    const before = this.paused();
+    this.saved = { ...saved }; this.ready = true;
+    for (const [key, control] of this.barriers) if (!seen.has(control.id)) this.saved[key] = control.paused;
+    const after = this.paused();
+    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      if (Boolean(before[key]) !== Boolean(after[key])) this.revisions.set(key, (this.revisions.get(key) || 0) + 1);
+    }
+  }
+  paused() { return { ...this.saved, ...Object.fromEntries(this.overrides) }; }
+  setPaused(key, paused) {
+    if (!key) throw new Error('학생 슬라이드를 먼저 연결해 주세요.');
+    this.overrides.set(key, paused);
+    this.revisions.set(key, (this.revisions.get(key) || 0) + 1);
+  }
+  confirm(key, id, paused) { this.saved[key] = paused; this.overrides.delete(key); this.barriers.set(key, { id, paused }); }
+  ticket(key) { return this.ready && key && !this.paused()[key] ? { key, revision: this.revisions.get(key) || 0 } : null; }
+  accepts(ticket) { return Boolean(ticket && this.ready && !this.paused()[ticket.key] && ticket.revision === (this.revisions.get(ticket.key) || 0)); }
+  async read(key, load) {
+    const ticket = this.ticket(key);
+    if (!ticket) throw new CollectionStoppedError(this.ready);
+    const data = await load();
+    if (!this.accepts(ticket)) throw new CollectionStoppedError(this.ready);
+    return { data, ticket };
+  }
+}

@@ -96,6 +96,23 @@ test('private store initialization and appends never write the original sheet', 
   assert.ok(!state.calls.some((call) => call.path.includes('permissions') || call.method === 'DELETE'));
 });
 
+test('a queued snapshot is filtered after stop, while private pause controls persist and other students keep recording', async () => {
+  const { fetcher, state } = mockGoogle({ existing: true });
+  const api = createGoogleWorkspace('token', assignment, [student], fetcher);
+  await api.initialize();
+  let stopped = false;
+  const pending = api.append([event('late', 'snapshot', makeObservation(observation('2026-10-12T00:00:00Z'), null, { sessionId: 'test' }))], { shouldInclude: () => !stopped });
+  stopped = true;
+  await pending; assert.equal(state.appendCount, 0);
+  await api.append([event('stop', 'collection', { paused: true })]);
+  const result = await api.append([event('blocked', 'snapshot', makeObservation(observation('2026-10-12T01:00:00Z'), null, { sessionId: 'test' })), event('other', 'snapshot', makeObservation(observation('2026-10-12T01:00:00Z'), null, { sessionId: 'test' }), 'slide:other')]);
+  assert.ok(!result.events.some((item) => item.id === 'blocked'));
+  assert.ok(result.events.some((item) => item.id === 'other'));
+  assert.equal(foldWorkspace(result.events).collectionPaused['slide:student-slide'], true);
+  await api.append([event('resume', 'collection', { paused: false })]);
+  assert.ok((await api.append([event('new', 'snapshot', makeObservation(observation('2026-10-12T02:00:00Z'), null, { sessionId: 'next' }))])).events.some((item) => item.id === 'new'));
+});
+
 test('shared or unknown-format stores stop before any writes', async () => {
   for (const options of [{ existing: true, shared: true }, { existing: true, badHeader: true }]) {
     const { fetcher, state } = mockGoogle(options);

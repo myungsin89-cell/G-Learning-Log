@@ -3,10 +3,11 @@
 import { formatAmount, formatCheckedAt } from '@/lib/storedWorkRecords.mjs';
 import styles from './SlideDashboardPreview.module.css';
 
-export default function CurrentSlideContents({ student, state, onRefresh }) {
+export default function CurrentSlideContents({ student, state, onRefresh, paused = false }) {
   const data = state?.data;
   return <section className={styles.slideTextSection} aria-label="슬라이드에 쓴 글">
-    <div className={styles.panelHeading}><h3>각 장에 쓴 글</h3>{student.slideId && <button className={styles.secondaryButton} disabled={state?.loading} onClick={onRefresh}>{state?.loading ? '글 불러오는 중…' : data ? '최신 글 다시 불러오기' : '슬라이드 글 불러오기'}</button>}</div>
+    <div className={styles.panelHeading}><h3>각 장에 쓴 글</h3>{student.slideId && <button className={styles.secondaryButton} disabled={state?.loading || paused} onClick={onRefresh}>{state?.loading ? '글 불러오는 중…' : data ? '최신 글 다시 불러오기' : '슬라이드 글 불러오기'}</button>}</div>
+    {paused && <p className={styles.smallNote}>기록 중지 상태에서는 새 본문을 조회하지 않습니다. 이전에 읽은 내용은 보존합니다.</p>}
     {state?.loading && <p className={styles.smallNote} role="status">현재 슬라이드를 읽는 중입니다.{data ? ' 아래는 이전에 확인한 내용입니다.' : ''}</p>}
     {state?.error && <p className={styles.slideError} role="alert">{state.error}{data ? ' 아래는 이전에 확인한 내용입니다.' : ''}</p>}
     {!student.slideId && <p className={styles.smallNote}>저장된 슬라이드 주소가 없어 내용을 읽을 수 없습니다.</p>}

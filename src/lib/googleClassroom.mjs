@@ -3,6 +3,7 @@ import { parsePresentationId, adaptPresentation } from './slideContents.mjs';
 import { createGoogleWorkspace } from './googleWorkspace.mjs';
 import { foldWorkspace } from './liveWorkRecords.mjs';
 import { JOIN_HEADERS } from './studentEntry.mjs';
+import { assertRosterConfirmation, ROSTER_NOTICE_VERSION } from './classroomPrivacy.mjs';
 
 const studentHeaders = ['student_number', 'student_name', 'slide_id', 'slide_url', 'status', 'last_active_at', 'current_char_count', 'current_slide_count', 'image_count', 'keyword_count', 'keywords_used', 'blank_slide_count', 'focus_ratio', 'teacher_feedback', 'last_checked_at', 'share_status'];
 const logHeaders = ['student_name', 'timestamp', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'copied_text', 'record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'];
@@ -87,14 +88,17 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
   }
   return {
     createStudentEntry: studentEntry,
-    async createClass({ name: inputName, rosterText, jobId, onProgress = () => {} }) {
+    async createClass({ name: inputName, rosterText, privacyConfirmed, jobId, onProgress = () => {} }) {
       if (!jobId || typeof jobId !== 'string') throw new Error('생성 식별자가 필요합니다.');
       const name = classroomName(inputName), students = parseRosterInput(rosterText);
       if (name === 'Sheet1' || name.startsWith('_')) throw new Error('학급 이름에는 Sheet1이나 _로 시작하는 이름을 사용할 수 없습니다.');
+      assertRosterConfirmation(privacyConfirmed);
       onProgress('학급 명단 시트 만드는 중…', { percent: 0 });
       const file = await ensureFile(jobId, 'G배움로그_학급명단_저장소', 'class-roster-v2', null, { className: name });
       onProgress('학급 저장 공간을 준비했어요.', { percent: 30 });
       await plan(file, jobId, 'class-roster-v2', { name, students }, [name]);
+      const notice = await read(file.id, "'_setup'!A3:B4");
+      if (!notice.length) await write(file.id, "'_setup'!A3:B4", [['privacy_notice_version', ROSTER_NOTICE_VERSION], ['teacher_confirmation_at', new Date().toISOString()]]);
       onProgress('학생 명단 저장 중…', { percent: 70 });
       await write(file.id, `${range(name)}!A1:B${students.length + 1}`, [['student_number', 'student_name'], ...students.map((student) => [student.number, student.name])]);
       onProgress('학급과 학생 명단을 저장했어요.', { percent: 100 });

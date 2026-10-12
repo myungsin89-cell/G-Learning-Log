@@ -76,7 +76,9 @@ function mockGoogle() {
           body.values.forEach((row, offset) => { file.tabs[title][start + offset] = row; });
           return response({});
         }
-        return response({ values: file.tabs[title] });
+        const first = Number(address.match(/!A(\d+)/)?.[1] || 1) - 1;
+        const last = address.match(/:[A-Z]+(\d+)$/)?.[1];
+        return response({ values: file.tabs[title].slice(first, last ? Number(last) : undefined) });
       }
       return response({ sheets: Object.keys(file.tabs).map((title) => ({ properties: { title } })) });
     }
@@ -88,15 +90,26 @@ function mockGoogle() {
 test('class creation persists actual attendance numbers in a new RAW private sheet and excludes internal tabs', async () => {
   const { fetcher, state } = mockGoogle(), before = structuredClone(state.files.get('original-roster'));
   const api = createGoogleClassroom('test', fetcher);
-  const input = { name: '4학년 4반', rosterText: '4 송명신\n1 김누리', jobId: 'class-job' };
+  const input = { name: '4학년 4반', rosterText: '4 송명신\n1 김누리', privacyConfirmed: true, jobId: 'class-job' };
   const created = await api.createClass(input);
   assert.notEqual(created.rosterId, 'original-roster');
   assert.deepEqual(state.files.get(created.rosterId).tabs['4학년 4반'].slice(1), [[1, '김누리'], [4, '송명신']]);
   assert.deepEqual(state.files.get('original-roster'), before);
+  assert.equal(state.files.get(created.rosterId).tabs._setup[2][0], 'privacy_notice_version');
+  assert.equal(state.files.get(created.rosterId).tabs._setup[3][0], 'teacher_confirmation_at');
   assert.deepEqual(await api.createClass(input), created);
   assert.equal(state.sequence, 1);
   assert.deepEqual((await createGoogleReader('test', fetcher).listClasses()).map((item) => item.name), ['기존 반', '4학년 4반']);
   await assert.rejects(api.createClass({ ...input, rosterText: '1 바꾼 이름' }), /입력 내용이 다릅니다/);
+});
+
+test('roster registration requires notice confirmation before any Google request', async () => {
+  const { fetcher, state } = mockGoogle();
+  const api = createGoogleClassroom('test', fetcher);
+  for (const privacyConfirmed of [undefined, false, 'true']) {
+    await assert.rejects(api.createClass({ name: '확인용 학급', rosterText: '4 학생', jobId: 'privacy-check', privacyConfirmed }), /개인정보 안내/);
+  }
+  assert.equal(state.calls.length, 0);
 });
 
 test('assignment copies preserve template, exclude its baseline, save keywords, and reopen on another reader', async () => {

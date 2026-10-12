@@ -44,6 +44,6 @@ export default function CreationPreview() {
     <label className={styles.field}>확인할 상황<select value={scenario} onChange={(event) => setScenario(event.target.value)}><option value="success">생성 완료</option><option value="failure">중간 연결 실패 후 재시도</option><option value="warning">생성 완료 후 공유 확인</option></select></label>
     <div className={styles.dialogActions}><button className={styles.secondaryButton} onClick={() => open('class')}>학급 생성 시안</button><button className={styles.primaryButton} onClick={() => open('assignment')}>학생 슬라이드 생성 시안</button></div>
     {notice && <p role="status">{notice}</p>}
-    {kind && <ClassroomCreation kind={kind} className="5학년 2반" roster={roster} onCreate={simulate} onClose={() => setKind(null)} onCreated={(created) => { setNotice(`${created.assignment?.name || created.name} · 생성 결과를 확인했습니다.`); setKind(null); }} />}
+    {kind && <ClassroomCreation preview kind={kind} className="5학년 2반" roster={roster} onCreate={simulate} onClose={() => setKind(null)} onCreated={(created) => { setNotice(`${created.assignment?.name || created.name} · 생성 결과를 확인했습니다.`); setKind(null); }} />}
   </div></main>;
 }

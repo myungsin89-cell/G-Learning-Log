@@ -4,7 +4,7 @@
 
 - Vercel 프로젝트: `g-learning-log-next`
 - 운영 브랜치: `release/next-version-2026-10-09`
-- 운영 원본: `https://g-learning-log-next.vercel.app`
+- 운영 원본: `https://baeumlog.chorok.app` (기존 Vercel 주소도 유지)
 - 개인정보처리방침: `https://g-learning-log-next.vercel.app/privacy`
 - 이용 안내: `https://g-learning-log-next.vercel.app/terms`
 
@@ -15,7 +15,7 @@
 - `NEXT_PUBLIC_APP_ENTRY=next`: 도메인 첫 화면을 신버전 로그인으로 연결한다.
 - `NEXT_PUBLIC_GOOGLE_READONLY_CLIENT_ID`: slidesight-505503 프로젝트의 기존 웹 OAuth 클라이언트 ID. 공개 설정이며 클라이언트 비밀 키를 사용하지 않는다.
 - `NEXT_PUBLIC_APP_MODE`: 비워 둔다. readonly는 쓰기 기능을 막는 별도 테스트 모드다.
-- `NEXT_PUBLIC_SUPPORT_EMAIL`: 공개할 문의 이메일을 운영자가 정한 경우만 설정한다. 미설정 시 Google 로그인 앱 정보의 지원 이메일을 안내한다.
+- `NEXT_PUBLIC_SUPPORT_EMAIL`: `myungsin89@gmail.com`. 미설정 시에도 같은 직접 문의 이메일을 코드 기본값으로 제공한다.
 
 개인정보처리방침 `/privacy`, 이용 안내 `/terms`, 학생 접속 `/join/[sheetId]`는 로그인 없이 열려야 한다. 학생 접속 시트와 교사 비공개 기록 시트를 분리한다.
 

@@ -166,6 +166,8 @@
 .recordListControls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e3eae3; }
 .recordListControls > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .recordListControls .smallNote { margin: 0; }
+.collectionControl { margin-bottom: 22px; padding: 16px; border: 1px solid #dce6dc; border-radius: 10px; background: #f8faf7; }
+.collectionControl h3 { font-size: 14px; }
 .exportActions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .reportScope { margin-bottom: 17px; color: #617768; font-size: 12px; line-height: 1.8; }
 .tableUnread { display: block; margin-top: 5px; color: #246b55; font-size: 10px; }

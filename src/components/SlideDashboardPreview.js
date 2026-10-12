@@ -7,6 +7,7 @@ import MadeByStamp from './MadeByStamp';
 import { createPreviewStudents, createPreviewConversations } from '@/lib/slidePreviewData';
 import { studentLabel, unreadStudentReplies, createSummaryCsv, createAnalysisExport } from '@/lib/workRecords.mjs';
 import StudentWorkDetail from './StudentWorkDetail';
+import { storeStudentKey } from '@/lib/liveWorkRecords.mjs';
 import StudentAccess from './StudentAccess';
 import KeywordInput from './KeywordInput';
 import { studentKey, formatAmount, formatCheckedAt, createStoredAnalysisExport, summarizeStudentCard } from '@/lib/storedWorkRecords.mjs';
@@ -113,6 +114,8 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
   const activeStudent = students.find((student) => studentKey(student) === modal?.number);
   const unread = (student) => unreadStudentReplies(threads[studentKey(student)] || [], readAt[studentKey(student)]);
   const inactiveMinutes = (student) => workspace?.inactiveMinutes?.[studentKey(student)] ?? null;
+  const recordingPaused = (student) => Boolean(workspace?.collectionPaused[storeStudentKey(student)]);
+  const collectionControl = activeStudent && workspace ? { paused: recordingPaused(activeStudent), ready: workspace.collectionReady, busy: workspace.collectionBusy.includes(storeStudentKey(activeStudent)), error: workspace.collectionErrors[storeStudentKey(activeStudent)], unsaved: workspace.collectionUnsaved[storeStudentKey(activeStudent)], canChange: Boolean(activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly'), onChange: (paused) => workspace.setStudentCollection(activeStudent, paused) } : null;
   const effectiveStatus = (student) => student.status === 'surge' && ((!readOnly && mode === 'project') || reviewed.includes(studentKey(student))) ? 'active' : student.status;
   const needsReview = students.filter((student) => (effectiveStatus(student) === 'surge' || unread(student) > 0 || inactiveMinutes(student) !== null));
   const filteredStudents = students.filter((student) => (
@@ -144,7 +147,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     setPresentations((previous) => ({ ...previous, [key]: { ...previous[key], loading: true, error: '' } }));
     const request = Promise.resolve().then(async () => {
       try {
-        const data = await onLoadPresentation(student.slideId);
+        const data = workspace ? await workspace.inspectPresentation(student) : await onLoadPresentation(student.slideId);
         setPresentations((previous) => ({ ...previous, [key]: { data, loading: false, error: '' } }));
       } catch (error) {
         setPresentations((previous) => ({ ...previous, [key]: { ...previous[key], loading: false, error: error.message || '슬라이드를 읽지 못했습니다.' } }));
@@ -159,7 +162,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     setModal({ type: 'student', number });
     const student = students.find((item) => studentKey(item) === number);
     // Original slides open in a new tab. Their text is loaded only on explicit request.
-    if (readOnly && student?.slideId && onLoadComments) {
+    if (readOnly && student?.slideId && onLoadComments && (!workspace || (workspace.collectionReady && !recordingPaused(student)))) {
       setNotice('슬라이드 댓글을 불러오는 중입니다.');
       try {
         const conversations = workspace ? await workspace.refreshComments(student) : await onLoadComments(student.slideId);
@@ -215,7 +218,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
       storedExport.definitions.keywords = Array.isArray(workspace.state.settings.keywords) ? '교사가 별도 저장소에 등록한 전체 과제 키워드와 확인 시점별 사용 키워드.' : '기존 저장된 사용 키워드의 합집합. 전체 과제 키워드 수는 미확인.';
       storedExport.definitions.addedAmounts = '새 확인값은 원본 템플릿 기준량을 제외한 수치. 기준량이 미기록된 학생은 기존 추가량을 유지하며 currentCounts에 전체 수치를 따로 제공.';
       storedExport.definitions.teacherMemo = '교사 비공개 저장소에 보관된 메모. 학생 슬라이드와 원본 과제 시트에는 저장하지 않음.';
-      storedExport.newWorkspace = { events: workspace.events, invalidRows: workspace.invalidRows, settings: workspace.state.settings, commentsErrors: workspace.commentsErrors };
+      storedExport.newWorkspace = { events: workspace.events, invalidRows: workspace.invalidRows, settings: workspace.state.settings, collectionPaused: workspace.collectionPaused, commentsErrors: workspace.commentsErrors };
       storedExport.students = storedExport.students.map((student) => ({ ...student, teacherMemo: memos[student.id] || '', feedbackReadAt: readAt[student.id] || null, surgeReviewed: reviewed.includes(student.id) }));
     }
     const data = kind === 'csv' ? createSummaryCsv(students, { ...config, readOnly, live: canWrite, keywordsKnown: !readOnly || Array.isArray(workspace?.state.settings.keywords) }) : JSON.stringify(readOnly ? storedExport : createAnalysisExport(config), null, 2);
@@ -276,7 +279,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
           <div className={styles.studentGrid}>{filteredStudents.map((student) => {
             const summary = cardSummary(student);
             return <button key={studentKey(student)} className={`${styles.studentCard} ${effectiveStatus(student) === 'surge' ? styles.surgeCard : ''}`} onClick={() => openStudent(studentKey(student))} aria-label={`${studentLabel(student)} 상세 보기`}>
-            <span className={styles.studentCardHeader}><strong>{studentLabel(student)}</strong><StatusBadge status={effectiveStatus(student)} label={readOnly && effectiveStatus(student) === 'unstarted' ? summary.recordCount ? `기록 ${summary.recordCount}개` : '저장 기록 없음' : statuses[effectiveStatus(student)].label} /></span>
+            <span className={styles.studentCardHeader}><strong>{studentLabel(student)}</strong><StatusBadge status={recordingPaused(student) ? 'idle' : effectiveStatus(student)} label={recordingPaused(student) ? '기록 중지' : readOnly && effectiveStatus(student) === 'unstarted' ? summary.recordCount ? `기록 ${summary.recordCount}개` : '저장 기록 없음' : statuses[effectiveStatus(student)].label} /></span>
             <span className={styles.metrics}><span><strong>{formatAmount(summary.wholeChars)}<em>자</em></strong><small>전체 글자</small><span className={styles.cardWholeAmount}>템플릿 포함</span></span><span><strong>{formatAmount(student.slides)}<em>장</em></strong><small>슬라이드</small></span><span><strong>{formatAmount(student.images)}<em>개</em></strong><small>추가 이미지</small></span></span>
             <span className={styles.cardKeywords}><span>키워드</span><strong>{readOnly ? `${matched(student).length}개 기록` : `${matched(student).length} / ${keywords.length}`}</strong><span className={styles.keywordDots}>{keywords.slice(0, 6).map((keyword) => <i key={keyword} className={matched(student).includes(keyword) ? styles.filledDot : ''} />)}</span></span>
             <span className={styles.cardChange}>{inactiveMinutes(student) !== null && <span className={styles.idleWatchNotice}>{inactiveMinutes(student)}분간 변화 미확인</span>}<strong className={styles.cardHistory}>{summary.recent}</strong>{summary.comparisonLabel ? <span className={styles.cardInterval}>{summary.comparisonLabel}</span> : readOnly && summary.recordCount > 0 && <span className={styles.cardInterval}>{summary.historyLabel}</span>}</span>
@@ -305,11 +308,11 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     {modal?.type === 'student-access' && <StudentAccess className={className} assignment={assignment} students={students} entry={workspace?.state.settings.studentEntry || assignment.studentEntry} onConfigure={onConfigureEntry} onClose={() => setModal(null)} />}
     {modal?.type === 'join' && <PreviewModal title="학생 접속 안내" onClose={() => setModal(null)}><div className={styles.modalBody}><p className={styles.joinDescription}>학생은 과제 링크로 들어와<br />접속 코드를 입력하고 본인 번호를 선택해요.</p><p className={styles.codeLabel}>접속 코드 예시</p><div className={styles.joinCode}>2684</div><p className={styles.smallNote}>화면 구성을 위한 예시입니다. 실제 접속 링크와 QR은 Google 연결 후 제공됩니다.</p></div><div className={styles.modalActions}><button className={styles.primaryButton} onClick={() => setModal(null)}>확인</button></div></PreviewModal>}
     {modal?.type === 'student' && activeStudent && <PreviewModal drawer title={`${studentLabel(activeStudent)} 작업 기록`} onClose={() => setModal(null)}
-      headingMeta={<StatusBadge status={effectiveStatus(activeStudent)} label={statuses[effectiveStatus(activeStudent)].label} />}
+      headingMeta={<StatusBadge status={recordingPaused(activeStudent) ? 'idle' : effectiveStatus(activeStudent)} label={recordingPaused(activeStudent) ? '기록 중지' : statuses[effectiveStatus(activeStudent)].label} />}
       headerAction={readOnly ? activeStudent.slideUrl ? <a className={`${styles.secondaryButton} ${styles.studentSlideButton}`} href={activeStudent.slideUrl} target="_blank" rel="noopener noreferrer">슬라이드 열기<Icon name="external" size={14} /></a> : <span className={styles.drawerMissingSlide}>슬라이드 미연결</span> : <button className={`${styles.secondaryButton} ${styles.studentSlideButton}`} onClick={() => setNotice('시안에는 실제 학생 슬라이드가 없습니다. Google 연결 후 원본을 열 수 있어요.')}>슬라이드 열기<Icon name="external" size={14} /></button>}>
       {inactiveMinutes(activeStudent) !== null && <p className={styles.drawerNotice}>{inactiveMinutes(activeStudent)}분간 변화가 확인되지 않았어요. 읽거나 생각하는 중일 수 있으니 학생의 상황을 함께 살펴보세요.</p>}
       {notice && <p className={styles.drawerNotice} role="status">{notice}</p>}
-      <StudentWorkDetail templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onConfirmAuthor={(message, role) => workspace?.confirmAuthor(activeStudent, message, role)} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onRead={markRead} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
+      <StudentWorkDetail collection={collectionControl} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onConfirmAuthor={(message, role) => workspace?.confirmAuthor(activeStudent, message, role)} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onRead={markRead} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
     </PreviewModal>}
   </div>;
 }

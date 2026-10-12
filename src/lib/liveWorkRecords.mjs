@@ -29,7 +29,7 @@ export function eventRow(event) {
 }
 
 export function foldWorkspace(events) {
-  const result = { snapshots: {}, records: {}, memos: {}, readAt: {}, reviewed: {}, identities: {}, messageRoles: {}, settings: {}, seen: new Set() };
+  const result = { snapshots: {}, records: {}, memos: {}, readAt: {}, reviewed: {}, identities: {}, messageRoles: {}, collectionPaused: {}, settings: {}, seen: new Set() };
   // Append order, rather than the client's clock, decides the latest saved setting.
   for (const event of events) {
     if (result.seen.has(event.id)) continue;
@@ -43,6 +43,7 @@ export function foldWorkspace(events) {
     else if (event.type === 'review' && typeof payload.value === 'boolean') result.reviewed[key] = { value: payload.value, recordId: payload.recordId };
     else if (event.type === 'identity' && payload.authorId) result.identities[`${key}:${payload.authorId}`] = payload.role;
     else if (event.type === 'message_role' && payload.messageId) result.messageRoles[`${key}:${payload.messageId}`] = payload.role;
+    else if (event.type === 'collection' && key && typeof payload.paused === 'boolean') result.collectionPaused[key] = payload.paused;
     else if (event.type === 'settings') result.settings = { ...result.settings, ...payload };
   }
   return result;

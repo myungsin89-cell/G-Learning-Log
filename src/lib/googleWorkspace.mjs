@@ -1,4 +1,4 @@
-import { EVENT_HEADERS, eventRow, parseWorkspaceEvents } from './liveWorkRecords.mjs';
+import { EVENT_HEADERS, eventRow, parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 import { adaptDriveComments } from './storedWorkRecords.mjs';
 
 export const WORKSPACE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.file'];
@@ -58,11 +58,14 @@ export function createGoogleWorkspace(accessToken, assignment, students, fetcher
       });
     },
     async load() { return locked(async () => { await assertPrivate(); return { storeId, ...await readEvents() }; }); },
-    async append(events) {
+    async append(events, { shouldInclude = () => true } = {}) {
       return locked(async () => {
         await assertPrivate();
         const saved = await readEvents(), ids = new Set(saved.events.map((event) => event.id));
-        const pending = events.filter((event) => !ids.has(event.id));
+        const paused = foldWorkspace(saved.events).collectionPaused;
+        // Recheck after waiting for the queue and private-store network reads,
+        // immediately before POST. A POST already sent cannot be recalled.
+        const pending = events.filter((event) => !ids.has(event.id) && (event.type !== 'snapshot' || !paused[event.studentId]) && shouldInclude(event));
         if (!pending.length) return { storeId, ...saved };
         const rows = pending.map(eventRow);
         try {

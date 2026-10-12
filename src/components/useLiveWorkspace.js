@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { foldWorkspace, makeObservation, mergeWorkspaceStudents, storeStudentKey, classifyConversations } from '@/lib/liveWorkRecords.mjs';
 import { advanceIdleWatch, idleWatchMinutes } from '@/lib/idleWatch.mjs';
+import { StudentCollectionGate, CollectionStoppedError } from '@/lib/studentCollection.mjs';
 
 export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadPresentation, loadComments }) {
   const [events, setEvents] = useState([]);
@@ -19,8 +20,10 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [conversations, setConversations] = useState({});
   const [commentsLoaded, setCommentsLoaded] = useState([]);
   const [commentsErrors, setCommentsErrors] = useState({});
+  const [collectionPaused, setCollectionPausedState] = useState({}), [collectionReady, setCollectionReady] = useState(false);
+  const [collectionBusy, setCollectionBusy] = useState([]), [collectionErrors, setCollectionErrors] = useState({}), [collectionUnsaved, setCollectionUnsaved] = useState({});
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
-    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0 });
+    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), collectionBusy: new Set(), studentRevisions: new Map() });
   const actions = useRef(null);
   const state = foldWorkspace(events);
   const students = mergeWorkspaceStudents(data, state);
@@ -43,7 +46,10 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   }, [running, idleWatchEnabled]);
   const hydrate = (result) => {
     refs.current.events = result.events;
+    const restored = foldWorkspace(result.events);
+    refs.current.gate.restore(restored.collectionPaused, restored.seen);
     if (!refs.current.mounted) return;
+    setCollectionPausedState(refs.current.gate.paused()); setCollectionReady(true);
     setEvents(result.events); setStoreId(result.storeId); setInvalidRows(result.invalidRows);
   };
 
@@ -51,7 +57,12 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     const ref = refs.current;
     ref.mounted = true;
     let cancelled = false;
-    loadWorkspace().then((result) => { if (result && !cancelled && ref.mounted && !ref.api) hydrate(result); }).catch((err) => { if (!cancelled && ref.mounted && !ref.api) setError(err.message); });
+    loadWorkspace().then((result) => {
+      if (!cancelled && ref.mounted && !ref.api) {
+        if (result) hydrate(result);
+        else { ref.gate.restore(); setCollectionPausedState(ref.gate.paused()); setCollectionReady(true); }
+      }
+    }).catch((err) => { if (!cancelled && ref.mounted && !ref.api) setError(err.message); });
     return () => { cancelled = true; ref.mounted = false; ref.continuous = false; clearTimeout(ref.timer); };
     // The component is keyed by assignment + initial load. Auth is read when called.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,22 +105,51 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     return save('settings', null, { keywords: [...new Set(keywords.map((word) => word.trim()).filter(Boolean))] });
   }
 
+  async function setStudentCollection(student, paused) {
+    const ref = refs.current, key = storeStudentKey(student);
+    if (!key || ref.collectionBusy.has(key)) return false;
+    ref.collectionBusy.add(key); setCollectionBusy([...ref.collectionBusy]);
+    setCollectionErrors((previous) => ({ ...previous, [key]: '' }));
+    if (paused) {
+      ref.gate.setPaused(key, true); setCollectionPausedState(ref.gate.paused()); resetIdleWatch();
+      setCollectionUnsaved((previous) => ({ ...previous, [key]: true }));
+    }
+    try {
+      if (!ref.api && !await connect({ purpose: 'privacy' })) throw new Error('Google 저장 권한을 연결한 뒤 중지 상태를 저장해 주세요.');
+      const control = event('collection', student, { paused });
+      const saved = await ref.api.append([control]);
+      if (!paused) { ref.gate.setPaused(key, false); resetIdleWatch(); }
+      ref.gate.confirm(key, control.id, paused);
+      hydrate(saved);
+      setCollectionUnsaved((previous) => ({ ...previous, [key]: false }));
+      return true;
+    } catch (err) {
+      if (ref.mounted) setCollectionErrors((previous) => ({ ...previous, [key]: `${paused ? '이 화면에서는 조회를 중지했지만, 중지 상태를 시트에 저장하지 못했습니다. 새로고침 전에 다시 저장해 주세요. ' : '중지 상태를 유지합니다. '}${err.message}` }));
+      return false;
+    } finally { ref.collectionBusy.delete(key); if (ref.mounted) setCollectionBusy([...ref.collectionBusy]); }
+  }
+
+  async function inspectPresentation(student) {
+    return (await refs.current.gate.read(storeStudentKey(student), () => loadPresentation(student.slideId))).data;
+  }
+
   async function refreshComments(student) {
     const key = student.id;
     try {
-      const threads = await loadComments(student.slideId);
+      const threads = (await refs.current.gate.read(storeStudentKey(student), () => loadComments(student.slideId))).data;
       if (refs.current.mounted) {
         setConversations((previous) => ({ ...previous, [key]: threads }));
         setCommentsLoaded((previous) => [...new Set([...previous, key])]);
         setCommentsErrors((previous) => ({ ...previous, [key]: '' }));
       }
       return threads;
-    } catch (err) { if (refs.current.mounted) setCommentsErrors((previous) => ({ ...previous, [key]: err.message })); throw err; }
+    } catch (err) { if (refs.current.mounted && !(err instanceof CollectionStoppedError)) setCommentsErrors((previous) => ({ ...previous, [key]: err.message })); throw err; }
   }
   async function feedback(student, content, commentId = null) {
     if (!refs.current.api) { setError('Google 저장 권한을 연결해 주세요.'); return false; }
     setError('');
     try {
+      if (!refs.current.gate.ticket(storeStudentKey(student))) throw new CollectionStoppedError(refs.current.gate.ready);
       await refs.current.api.feedback(student.slideId, content, commentId);
     } catch (err) { setError(`${err.message} 같은 글을 다시 보내기 전에 댓글을 새로고침해 확인해 주세요.`); return false; }
     try { await refreshComments(student); }
@@ -119,43 +159,53 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
 
   async function collect() {
     const ref = refs.current;
-    if (!ref.api || ref.collecting || document.visibilityState !== 'visible') return;
+    if (!ref.api || !ref.gate.ready || ref.collecting || document.visibilityState !== 'visible') return;
     ref.collecting = true; setBusy(true); setError('');
     const interruptedSession = ref.sessionId, wasContinuous = ref.continuous;
     const watchRevision = ref.watchRevision;
     const previousState = foldWorkspace(ref.events);
     const keywords = previousState.settings.keywords || data.keywords;
-    const pending = [], failed = [];
+    const pending = [], failed = [], tickets = new Map();
     try {
-      const linked = data.students.filter((student) => student.slideId);
+      const linked = data.students.filter((student) => ref.gate.ticket(storeStudentKey(student)));
       for (let index = 0; index < linked.length; index += 3) {
         if (!ref.mounted || document.visibilityState !== 'visible' || ref.sessionId !== interruptedSession) return;
         setProgress(`${Math.min(index + 3, linked.length)} / ${linked.length}명 작업 확인 중`);
         const chunk = linked.slice(index, index + 3);
-        const results = await Promise.allSettled(chunk.map((student) => loadPresentation(student.slideId)));
+        const results = await Promise.allSettled(chunk.map((student) => ref.gate.read(storeStudentKey(student), () => loadPresentation(student.slideId))));
         results.forEach((result, offset) => {
           const student = chunk[offset];
-          if (result.status === 'fulfilled') pending.push(event('snapshot', student, makeObservation(result.value, previousState.snapshots[storeStudentKey(student)], { sessionId: interruptedSession, continuous: wasContinuous, keywords })));
-          else failed.push(`${student.number ? `${student.number}번 ` : ''}${student.name}: ${result.reason.message}`);
+          if (result.status === 'fulfilled') {
+            const { data: presentation, ticket } = result.value;
+            const item = event('snapshot', student, makeObservation(presentation, previousState.snapshots[storeStudentKey(student)], { sessionId: interruptedSession, continuous: wasContinuous && ref.studentRevisions.get(ticket.key) === ticket.revision, keywords }));
+            pending.push(item); tickets.set(item.id, ticket);
+          } else if (!(result.reason instanceof CollectionStoppedError)) failed.push(`${student.number ? `${student.number}번 ` : ''}${student.name}: ${result.reason.message}`);
         });
       }
       if (!ref.mounted || document.visibilityState !== 'visible' || ref.sessionId !== interruptedSession) return;
-      if (pending.length) hydrate(await ref.api.append(pending));
+      let collected = [];
+      if (pending.length) {
+        const saved = await ref.api.append(pending, { shouldInclude: (item) => ref.gate.accepts(tickets.get(item.id)) });
+        hydrate(saved);
+        const ids = new Set(saved.events.map((item) => item.id));
+        collected = pending.filter((item) => ids.has(item.id) && ref.gate.accepts(tickets.get(item.id)));
+        for (const item of collected) { const ticket = tickets.get(item.id); ref.studentRevisions.set(ticket.key, ticket.revision); }
+      }
       if (!ref.mounted || document.visibilityState !== 'visible' || ref.sessionId !== interruptedSession) return;
       ref.continuous = true;
       if (failed.length) resetIdleWatch();
       else if (ref.live && ref.idleWatchEnabled && ref.watchRevision === watchRevision) {
         const next = { ...ref.idleTracks };
-        for (const item of pending) next[item.studentId] = advanceIdleWatch(next[item.studentId], item.payload);
+        for (const item of collected) next[item.studentId] = advanceIdleWatch(next[item.studentId], item.payload);
         ref.idleTracks = next; setIdleTracks(next); setWatchClock(Date.now());
       }
-      setProgress(`${pending.length}명 기록 저장 · ${new Date().toLocaleTimeString('ko-KR', { hour12: false })} 확인`);
+      setProgress(`${collected.length}명 기록 저장 · ${new Date().toLocaleTimeString('ko-KR', { hour12: false })} 확인`);
       if (failed.length) { ref.continuous = false; setError(`일부 학생을 확인하지 못했습니다. 이전 기록을 유지합니다. ${failed.join(' / ')}`); }
       // Refresh direct Slides comments on every second live cycle, and on manual checks.
       if (!wasContinuous || (ref.commentCycle = (ref.commentCycle || 0) + 1) % 2 === 0) {
         for (let index = 0; index < linked.length; index += 3) {
           if (!ref.mounted || document.visibilityState !== 'visible' || ref.sessionId !== interruptedSession) break;
-          await Promise.allSettled(linked.slice(index, index + 3).map(refreshComments));
+          await Promise.allSettled(linked.slice(index, index + 3).filter((student) => ref.gate.ticket(storeStudentKey(student))).map(refreshComments));
         }
       }
     } catch (err) {
@@ -188,9 +238,10 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   }, [running, resetIdleWatch]);
 
   return { enabled, running, busy, progress, error, storeId, invalidRows, events, state, students,
+    collectionPaused, collectionReady, collectionBusy, collectionErrors, collectionUnsaved, setStudentCollection, inspectPresentation,
     idleWatchEnabled, toggleIdleWatch,
     inactiveMinutes: Object.fromEntries(students.map((student) => [student.id,
-      running && idleWatchEnabled ? idleWatchMinutes(idleTracks[storeStudentKey(student)], watchClock) : null])),
+      running && idleWatchEnabled && !collectionPaused[storeStudentKey(student)] ? idleWatchMinutes(idleTracks[storeStudentKey(student)], watchClock) : null])),
     keywords: state.settings.keywords || data.keywords,
     memos: Object.fromEntries(students.map((student) => [student.id, state.memos[storeStudentKey(student)] || ''])),
     readAt: Object.fromEntries(students.map((student) => [student.id, state.readAt[storeStudentKey(student)] || null])),

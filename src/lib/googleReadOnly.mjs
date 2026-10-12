@@ -1,6 +1,6 @@
 import { adaptStoredAssignment, adaptDriveComments } from './storedWorkRecords.mjs';
 import { adaptPresentation, parsePresentationId } from './slideContents.mjs';
-import { parseWorkspaceEvents } from './liveWorkRecords.mjs';
+import { parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 
 // This module deliberately has no dependency on the legacy writer or gapi token.
 export const READ_ONLY_SCOPES = [
@@ -39,7 +39,8 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
   return {
     async account() { const data = await get('drive', 'about', [['fields', 'user(permissionId,displayName)']]); return data.user; },
     async loadWorkspace(assignmentId) {
-      const files = await listFiles("mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false and appProperties has { key='gbaeumStore' and value='teacher-workspace-v2' }");
+      const source = String(assignmentId).replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+      const files = await listFiles(`mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false and appProperties has { key='gbaeumStore' and value='teacher-workspace-v2' } and appProperties has { key='sourceSheet' and value='${source}' }`);
       const found = [];
       for (const file of files) {
         const info = await get('drive', `files/${encodeURIComponent(file.id)}`, [['fields', 'id,ownedByMe,appProperties,permissions(type,role)']]);
@@ -103,6 +104,10 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       if (!slideId && assignment.creationId) throw new Error('예시 슬라이드 표지를 찾을 수 없습니다.');
       if (!slideId) { slideId = parsePresentationId(assignment.summary?.coverSlideId); source = 'student'; }
       if (!slideId) return null;
+      if (source === 'student') {
+        const workspace = await createGoogleReader(accessToken, fetcher).loadWorkspace(assignment.id);
+        if (workspace && foldWorkspace(workspace.events).collectionPaused[`slide:${slideId}`]) return null;
+      }
       // Only one representative deck, with page IDs only; never poll all student slides.
       const presentation = await get('slides', `presentations/${encodeURIComponent(slideId)}`, [['fields', 'slides(objectId)']]);
       const pageId = presentation.slides?.[0]?.objectId;

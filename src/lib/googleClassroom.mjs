@@ -91,10 +91,13 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       if (!jobId || typeof jobId !== 'string') throw new Error('생성 식별자가 필요합니다.');
       const name = classroomName(inputName), students = parseRosterInput(rosterText);
       if (name === 'Sheet1' || name.startsWith('_')) throw new Error('학급 이름에는 Sheet1이나 _로 시작하는 이름을 사용할 수 없습니다.');
-      onProgress('학급 명단 시트 만드는 중…');
+      onProgress('학급 명단 시트 만드는 중…', { percent: 0 });
       const file = await ensureFile(jobId, 'G배움로그_학급명단_저장소', 'class-roster-v2', null, { className: name });
+      onProgress('학급 저장 공간을 준비했어요.', { percent: 30 });
       await plan(file, jobId, 'class-roster-v2', { name, students }, [name]);
+      onProgress('학생 명단 저장 중…', { percent: 70 });
       await write(file.id, `${range(name)}!A1:B${students.length + 1}`, [['student_number', 'student_name'], ...students.map((student) => [student.number, student.name])]);
+      onProgress('학급과 학생 명단을 저장했어요.', { percent: 100 });
       return { id: `${file.id}:${name}`, name, rosterId: file.id };
     },
     async createAssignment({ className: inputClass, name: inputName, templateUrl, roster, keywords: inputKeywords, keywordsText = '', shareSlides = true, entryMode = 'shared', jobId, onProgress = () => {} }) {
@@ -104,9 +107,11 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       const templateId = parsePresentationId(templateUrl);
       if (!templateId) throw new Error('올바른 Google 슬라이드 템플릿 주소를 입력해 주세요.');
       const keywords = classroomKeywords(inputKeywords ?? keywordsText);
-      onProgress('슬라이드 템플릿 확인 중…');
+      const report = (message, percent, completed = 0) => onProgress(message, { percent, completed, total: students.length });
+      report('예시 슬라이드 확인 중…', 0);
       const template = await request('drive', `files/${encodeURIComponent(templateId)}`, { params: [['fields', 'id,mimeType,capabilities(canCopy)']] });
       if (template.mimeType !== 'application/vnd.google-apps.presentation' || template.capabilities?.canCopy === false) throw new Error('복사할 수 있는 Google 슬라이드 템플릿을 선택해 주세요.');
+      report('과제 저장 공간과 배부 원본 준비 중…', 5);
       const file = await ensureFile(jobId, `SlideSight_DB_[${className}]_[${name}]`, 'classroom-assignment-v2');
       if (!['shared', 'individual'].includes(entryMode)) throw new Error('학생 접속 방식을 확인해 주세요.');
       const value = { className, name, templateUrl: templateId, roster: students, keywordsText: keywords.join(', '), ...(Array.isArray(inputKeywords) ? { keywords } : {}), shareSlides, entryMode };
@@ -121,9 +126,11 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       const logs = await read(file.id, "'activity_logs'!A1:M2");
       if (logs.length && JSON.stringify(logs[0]) !== JSON.stringify(logHeaders)) throw new Error('새 과제의 기록 탭 형식이 달라 변경하지 않았습니다.');
       if (!logs.length) await write(file.id, "'activity_logs'!A1:M2", [logHeaders, ['SYSTEM_BASELINE', baseline.checkedAt, baseline.charCount, baseline.slideCount, baseline.imageCount, 0, 'TEMPLATE_BASELINE']]);
+      report('학생 슬라이드 생성 준비를 마쳤어요.', 20);
       const savedStudents = [], warnings = [];
       for (let index = 0; index < students.length; index++) {
-        const student = students[index]; onProgress(`${index + 1} / ${students.length}명 · ${student.number}번 ${student.name} 배부 중…`);
+        const student = students[index];
+        report(`${student.number}번 ${student.name} 슬라이드 만드는 중…`, 20 + Math.floor(index / students.length * 65), index);
         const copyJob = `${jobId}:${student.number}`;
         const copy = await ensureFile(copyJob, `[${student.number}번 ${student.name}] ${name}`, 'student-copy-v2', frozen.id);
         await assertJob(copy.id, copyJob, 'student-copy-v2');
@@ -141,19 +148,23 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
         row[2] = copy.id; row[3] = slideUrl; row[15] = shared;
         await write(file.id, `'students'!A${index + 2}:P${index + 2}`, [row]);
         savedStudents.push({ ...student, slideId: copy.id, slideUrl });
+        report(`${student.number}번 ${student.name} 슬라이드를 만들었어요.`, 20 + Math.floor((index + 1) / students.length * 65), index + 1);
       }
-      onProgress('핵심 키워드와 과제 설정을 시트에 저장 중…');
+      report('핵심 키워드와 과제 설정 저장 중…', 85, students.length);
       const assignment = { id: file.id, name };
       const workspace = createGoogleWorkspace(accessToken, assignment, savedStudents, fetcher);
       await workspace.initialize();
       await workspace.append([{ id: `${jobId}:keywords`, type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload: { keywords } }]);
+      report('과제 설정을 저장했어요.', 92, students.length);
       let entry = { mode: 'individual' };
       if (entryMode === 'shared') {
-        try { entry = await studentEntry({ assignment, className, students: savedStudents, jobId: `join:${assignment.id}`, onProgress }); }
+        try { entry = await studentEntry({ assignment, className, students: savedStudents, jobId: `join:${assignment.id}`, onProgress: (message) => report(message, 92, students.length) }); }
         catch (err) { warnings.push(`공통 학생 접속 링크: ${err.message}`); entry = { mode: 'shared', pending: true }; }
       }
+      report('생성 결과 마무리 중…', 97, students.length);
       await request('drive', `files/${encodeURIComponent(file.id)}`, { method: 'PATCH', body: { appProperties: { setupStatus: warnings.length ? 'needs-sharing' : 'ready', coverSlide: frozen.id, entryMode, ...(entry.id ? { joinSheet: entry.id } : {}) } } });
       Object.assign(assignment, { studentEntry: entry });
+      report(warnings.length ? '슬라이드 생성 완료 · 공유 확인 필요' : '슬라이드와 학생 접속 안내를 준비했어요.', 100, students.length);
       return { assignment, students: savedStudents, warnings };
     },
   };

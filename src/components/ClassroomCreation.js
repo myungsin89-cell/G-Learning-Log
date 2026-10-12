@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { classroomName, classroomKeywords } from '@/lib/googleClassroom.mjs';
 import KeywordInput from './KeywordInput';
+import CreationProgressDialog from './CreationProgressDialog';
 import { parseRosterInput } from '@/lib/workRecords.mjs';
 import { parsePresentationId } from '@/lib/slideContents.mjs';
 import styles from './ClassWorkspacePreview.module.css';
@@ -11,15 +12,16 @@ import real from './ClassroomCreation.module.css';
 export default function ClassroomCreation({ kind, className, roster = [], existingNames = [], initialPlan, onCreate, onCreated, onClose }) {
   const dialog = useRef(null), job = useRef(null), prepared = useRef(initialPlan || null), inFlight = useRef(false);
   const titleId = useId();
-  const [busy, setBusy] = useState(false), [progress, setProgress] = useState(''), [error, setError] = useState('');
+  const [busy, setBusy] = useState(false), [progress, setProgress] = useState({ percent: 0, completed: 0, total: 0, message: '' }), [error, setError] = useState('');
+  const [showProgress, setShowProgress] = useState(false);
   const [locked, setLocked] = useState(Boolean(initialPlan)), [result, setResult] = useState(null);
   const [keywordList, setKeywordList] = useState(() => classroomKeywords(initialPlan?.keywords ?? initialPlan?.keywordsText ?? '')), [keywordDraft, setKeywordDraft] = useState('');
   const members = initialPlan?.roster || roster;
   const [selected, setSelected] = useState(() => members.filter((student) => Number.isSafeInteger(student.number)).map((student) => student.number));
   const isClass = kind === 'class';
-  useEffect(() => { const element = dialog.current; element.showModal(); return () => element.close(); }, []);
+  useEffect(() => { const element = dialog.current; if (showProgress) element.close(); else element.showModal(); return () => { if (element.open) element.close(); }; }, [showProgress]);
   async function submit(event) {
-    event.preventDefault(); if (inFlight.current) return; inFlight.current = true; setError('');
+    event?.preventDefault(); if (inFlight.current) return; inFlight.current = true; setError('');
     try {
       if (!prepared.current) {
         if (!isClass && keywordDraft.trim()) throw new Error('입력한 키워드는 추가를 눌러 목록에 넣어 주세요.');
@@ -33,15 +35,17 @@ export default function ClassroomCreation({ kind, className, roster = [], existi
         prepared.current = payload;
       }
       job.current ||= prepared.current.jobId || crypto.randomUUID();
-      setBusy(true); setLocked(true); setProgress('Google 연결 확인 중…');
-      const created = await onCreate({ ...prepared.current, jobId: job.current, onProgress: setProgress });
-      if (created.warnings?.length) { setResult(created); setProgress('슬라이드는 만들었지만 일부 학생의 편집 공유가 완료되지 않았습니다.'); }
-      else onCreated(created);
+      dialog.current.close();
+      setBusy(true); setLocked(true); setResult(null); setShowProgress(true);
+      setProgress({ name: prepared.current.name, percent: 0, completed: 0, total: isClass ? 0 : prepared.current.roster.length, message: 'Google 연결 확인 중…' });
+      const created = await onCreate({ ...prepared.current, jobId: job.current, onProgress: (message, details = {}) => setProgress((previous) => ({ ...previous, ...details, message })) });
+      setResult(created);
+      setProgress((previous) => ({ ...previous, percent: 100, message: '생성을 완료했습니다.' }));
     } catch (err) { setError(err.message); }
     finally { inFlight.current = false; setBusy(false); }
   }
   const close = () => { if (!busy) onClose(); };
-  return <dialog ref={dialog} className={`${styles.dialog} ${real.dialog}`} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+  return <><dialog ref={dialog} className={`${styles.dialog} ${real.dialog}`} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
     <div className={styles.dialogHeader}><h2 id={titleId}>{isClass ? '새 학급 만들기' : initialPlan ? '과제 배부 이어하기' : '새 과제 만들기'}</h2><button className={styles.iconButton} onClick={close} disabled={busy} aria-label="닫기">×</button></div>
     <form onSubmit={submit}>
       <div className={`${styles.dialogBody} ${real.body}`}>
@@ -57,11 +61,9 @@ export default function ClassroomCreation({ kind, className, roster = [], existi
             <label className={real.share}><input name="share" type="checkbox" defaultChecked={initialPlan?.shareSlides ?? true} /><span>학생 슬라이드를 링크로 편집할 수 있도록 공유<small>각 학생에게 자신의 슬라이드 링크를 전달하세요. 명단·교사 메모 시트는 공유하지 않습니다.</small></span></label>
           </>}
         </fieldset>
-        {busy && <p className={real.progress} role="status">{progress}</p>}
         {error && <p className={real.warning} role="alert">{error}{locked && <span>입력 내용을 유지했습니다. 다시 시도하면 이미 생성한 파일부터 이어서 진행합니다.</span>}</p>}
-        {result && <div className={real.warning} role="status"><p>{progress}</p><ul>{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
       </div>
-      <div className={styles.dialogActions}><button type="button" className={styles.secondaryButton} onClick={close} disabled={busy}>닫기</button>{result && <button type="button" className={styles.secondaryButton} onClick={() => onCreated(result)}>과제 열기</button>}<button className={styles.primaryButton} disabled={busy}>{busy ? '만드는 중…' : locked ? '이어서 다시 시도' : isClass ? '학급 만들기' : '과제 만들고 배부하기'}</button></div>
+      <div className={styles.dialogActions}><button type="button" className={styles.secondaryButton} onClick={close} disabled={busy}>닫기</button><button className={styles.primaryButton} disabled={busy}>{busy ? '만드는 중…' : locked ? '이어서 다시 시도' : isClass ? '학급 만들기' : '과제 만들고 배부하기'}</button></div>
     </form>
-  </dialog>;
+  </dialog>{showProgress && <CreationProgressDialog kind={kind} name={progress.name} className={className} busy={busy} progress={progress} result={result} error={error} onRetry={() => submit()} onBack={() => setShowProgress(false)} onClose={close} onCreated={onCreated} />}</>;
 }

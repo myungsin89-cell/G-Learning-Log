@@ -136,6 +136,39 @@ test('partial distribution resumes from a saved plan without duplicating success
   assert.equal(created.students.length, 2); assert.equal(state.sequence, 6);
 });
 
+test('creation progress counts students only after their slide link is saved and finishes after final setup', async () => {
+  const { fetcher, state } = mockGoogle(), updates = [];
+  await createGoogleClassroom('test', fetcher).createAssignment({ ...assignmentInput, onProgress(message, detail) {
+    updates.push({ message, ...detail });
+    if (detail.completed > 0) {
+      const sheet = [...state.files.values()].find((file) => file.appProperties?.gbaeumCreation === assignmentInput.jobId);
+      assert.ok(sheet.tabs.students[detail.completed][2], 'A completed student must have a persisted slide link');
+    }
+    if (detail.percent === 100) {
+      assert.equal(state.calls.at(-1).method, 'PATCH');
+      assert.equal(state.calls.at(-1).body.appProperties.setupStatus, 'ready');
+    }
+  } });
+  assert.equal(updates[0].percent, 0);
+  assert.ok(updates.some((update) => update.completed === 1 && update.percent < 100));
+  assert.ok(updates.some((update) => update.completed === 2 && update.percent < 100));
+  assert.ok(updates.every((update, index) => index === 0 || update.percent >= updates[index - 1].percent));
+  assert.deepEqual([updates.at(-1).percent, updates.at(-1).completed, updates.at(-1).total], [100, 2, 2]);
+});
+
+test('a failed copy or final save never reports full completion', async () => {
+  const partial = mockGoogle(), updates = [];
+  partial.state.failStudent = 'assignment-job:4';
+  await assert.rejects(createGoogleClassroom('test', partial.fetcher).createAssignment({ ...assignmentInput, onProgress: (_, detail) => updates.push(detail) }));
+  assert.equal(Math.max(...updates.map((update) => update.completed)), 1);
+  assert.ok(updates.every((update) => update.percent < 100));
+  const final = mockGoogle(), finalUpdates = [];
+  const failFinalSave = (address, options) => options.method === 'PATCH' ? Promise.resolve({ ok: false, status: 500 }) : final.fetcher(address, options);
+  await assert.rejects(createGoogleClassroom('test', failFinalSave).createAssignment({ ...assignmentInput, onProgress: (_, detail) => finalUpdates.push(detail) }));
+  assert.equal(finalUpdates.at(-1).percent, 97);
+  assert.equal(finalUpdates.at(-1).completed, 2);
+});
+
 test('a sharing failure remains explicit and can be retried without creating more slides', async () => {
   const { fetcher, state } = mockGoogle(); state.sharingFails = true;
   const api = createGoogleClassroom('test', fetcher), created = await api.createAssignment(assignmentInput);

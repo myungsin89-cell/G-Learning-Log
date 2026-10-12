@@ -10,8 +10,7 @@
 .share { display: flex; align-items: flex-start; gap: 10px; margin-top: 23px; color: #3e6150; font-size: 13px; line-height: 1.65; }
 .share input { margin-top: 4px; accent-color: #246b55; }
 .share small { display: block; color: #77847a; margin-top: 5px; font-size: 11px; }
-.progress, .warning { margin-top: 20px; padding: 13px 15px; border-radius: 9px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.progress { color: #246b55; background: #edf5ee; }
+.warning { margin-top: 20px; padding: 13px 15px; border-radius: 9px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .warning { color: #854e28; background: #fff6e9; }
 .warning span { display: block; margin-top: 7px; }
 .warning ul { padding-left: 18px; margin-top: 10px; }
@@ -20,3 +19,27 @@
 .entryMode label { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border: 1px solid #e1e9de; border-radius: 9px; margin-top: 7px; }
 .entryMode input { margin-top: 4px; accent-color: #246b55; }
 .entryMode small { display: block; margin-top: 4px; color: #7c887e; font-size: 11px; line-height: 1.7; }
+.progressDialog { width: min(520px, calc(100% - 32px)); }
+.progressDialog[open] { display: flex; flex-direction: column; }
+.progressDialog > :first-child { align-items: flex-start; }
+.progressDialog > :first-child, .progressActions { flex-shrink: 0; }
+.progressDialog button:disabled { opacity: .45; cursor: default; }
+.progressBody { min-height: 0; padding: 26px 30px 30px; overflow-y: auto; }
+.progressContext { color: #708074; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.progressAmount { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 22px 0 17px; }
+.progressAmount strong { color: #246b55; font-size: 60px; font-weight: 750; letter-spacing: -.055em; line-height: 1; font-variant-numeric: tabular-nums; }
+.progressAmount strong span { margin-left: 5px; font-size: 24px; font-weight: 550; letter-spacing: 0; }
+.progressBar { display: block; appearance: none; width: 100%; height: 10px; border: 0; border-radius: 20px; overflow: hidden; background: #edf1ec; color: #246b55; }
+.progressBar::-webkit-progress-bar { background: #edf1ec; border-radius: 20px; }
+.progressBar::-webkit-progress-value { background: #246b55; border-radius: 20px; transition: width .3s ease; }
+.progressBar::-moz-progress-bar { background: #246b55; border-radius: 20px; }
+.studentCount { margin-top: 16px; font-size: 13px; line-height: 1.6; color: #708074; }
+.studentCount strong { color: #20342b; font-weight: 700; }
+.progressMessage { margin-top: 24px; color: #20342b; font-size: 15px; font-weight: 650; line-height: 1.7; overflow-wrap: anywhere; }
+.progressHint { margin-top: 9px; font-size: 12px; line-height: 1.7; color: #708074; }
+.progressActions { flex-wrap: wrap; }
+.spinner { width: 27px; height: 27px; border: 3px solid #e1e9de; border-top-color: #246b55; border-radius: 50%; animation: creationSpin 1s linear infinite; }
+.doneMark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #246b55; background: #edf5ee; font-size: 22px; }
+@keyframes creationSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .progressBar::-webkit-progress-value { transition: none; } }
+@media (max-width: 600px) { .progressBody { padding: 22px 20px 25px; } .progressAmount strong { font-size: 52px; } }

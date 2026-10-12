@@ -11,7 +11,7 @@ import { createGoogleReader } from '@/lib/googleReadOnly.mjs';
 import { createGoogleWorkspace } from '@/lib/googleWorkspace.mjs';
 import { createGoogleClassroom } from '@/lib/googleClassroom.mjs';
 import { foldWorkspace } from '@/lib/liveWorkRecords.mjs';
-import { readOnlyClientId, saveReadOnlyClientId, signInReadOnly, signInWorkspace, signInClassroom, currentWorkspaceSession, adoptWorkspaceSession, clearWorkspaceSession, clearReadOnlySession, currentReadOnlySession } from '@/lib/readOnlyAuth';
+import { readOnlyClientId, saveReadOnlyClientId, signInReadOnly, signInTeacher, signInWorkspace, signInClassroom, currentWorkspaceSession, adoptWorkspaceSession, clearWorkspaceSession, clearReadOnlySession, currentReadOnlySession } from '@/lib/readOnlyAuth';
 import styles from './ExistingLogReader.module.css';
 import selectionStyles from './ClassSelection.module.css';
 
@@ -30,6 +30,7 @@ export default function ExistingLogReader() {
   const [roster, setRoster] = useState(null);
   const [rosterError, setRosterError] = useState('');
   const [creation, setCreation] = useState(null);
+  const [connectionRevision, setConnectionRevision] = useState(0);
   const coverCache = useRef(new Map());
   const stage = !reader ? 'login' : data ? `assignment:${data.assignment.id}` : selectedClass ? `class:${selectedClass.id}` : 'classes';
   useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [stage]);
@@ -38,8 +39,10 @@ export default function ExistingLogReader() {
     setError('');
     if (!readOnlyClientId()) { setShowConfig(true); return; }
     setBusy(true);
+    let acquired = false;
     try {
-      const session = await signInReadOnly();
+      const session = await (process.env.NEXT_PUBLIC_APP_MODE === 'readonly' ? signInReadOnly() : signInTeacher());
+      acquired = true;
       const api = createGoogleReader(session.accessToken);
       const results = await Promise.allSettled([api.listClasses(), api.account()]);
       for (const result of results) if (result.status === 'rejected') throw result.reason;
@@ -47,6 +50,7 @@ export default function ExistingLogReader() {
       const sameAccount = account?.permissionId && account.permissionId === results[1].value?.permissionId;
       setAccount(results[1].value);
       setReader(api);
+      setConnectionRevision((previous) => previous + 1);
       setClasses(result);
       if (!sameAccount) {
         coverCache.current.clear();
@@ -54,7 +58,7 @@ export default function ExistingLogReader() {
         setSelectedAssignment(null); setData(null);
       }
       setNotice('');
-    } catch (err) { setError(err.message); }
+    } catch (err) { if (acquired) disconnect(); setError(err.message); }
     finally { setBusy(false); }
   }
 
@@ -116,14 +120,15 @@ export default function ExistingLogReader() {
     finally { setBusy(false); }
   }
   function backToClasses() { setData(null); setSelectedClass(null); setSelectedAssignment(null); setAssignments([]); setError(''); }
-  async function authorize() {
-    const session = await authorizeSession(false);
+  async function authorize(options) {
+    const session = await authorizeSession(false, options);
     return createGoogleWorkspace(session.accessToken, data.assignment, data.students);
   }
-  async function authorizeSession(copyTemplate) {
+  async function authorizeSession(copyTemplate, { interactive = true } = {}) {
     if (!account?.permissionId) throw new Error('계정 확인을 위해 과제 목록에서 다시 로그인해 주세요.');
     // Called directly by the user's button so GIS can open its permission popup.
     const cached = currentWorkspaceSession();
+    if ((!cached || (copyTemplate && !cached.scopes.includes('https://www.googleapis.com/auth/drive'))) && !interactive) throw new Error('Google 연결이 만료됐습니다. Google 다시 연결을 눌러 주세요.');
     const session = cached && (!copyTemplate || cached.scopes.includes('https://www.googleapis.com/auth/drive')) ? cached : await (copyTemplate ? signInClassroom() : signInWorkspace());
     const nextReader = createGoogleReader(session.accessToken);
     const nextAccount = await nextReader.account();
@@ -163,7 +168,7 @@ export default function ExistingLogReader() {
   if (data) return <>
     {busy && <p className={styles.floating} role="status">저장된 기록을 다시 불러오는 중입니다.</p>}
     {error && <div className={styles.floating} role="alert">{error}<button onClick={connect} disabled={busy}>다시 로그인</button><button onClick={() => setError('')}>닫기</button></div>}
-    <ConnectedAssignment key={`${selectedAssignment.id}-${data.loadedAt}`} data={data}
+    <ConnectedAssignment key={`${selectedAssignment.id}-${data.loadedAt}-${connectionRevision}`} data={data}
       onBack={() => { setData(null); setError(''); }} onRefresh={() => { if (!busy) openAssignment(selectedAssignment); }}
       onHome={backToClasses}
       configureEntry={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? configureEntry : undefined}

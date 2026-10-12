@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { foldWorkspace, makeObservation, mergeWorkspaceStudents, storeStudentKey, classifyConversations } from '@/lib/liveWorkRecords.mjs';
 import { advanceIdleWatch, idleWatchMinutes } from '@/lib/idleWatch.mjs';
 import { StudentCollectionGate, CollectionStoppedError } from '@/lib/studentCollection.mjs';
+import { WorkspaceConnection } from '@/lib/workspaceConnection.mjs';
 
 export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadPresentation, loadComments }) {
   const [events, setEvents] = useState([]);
@@ -25,7 +26,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [monitoringEnded, setMonitoringEndedState] = useState(false), [monitoringBusy, setMonitoringBusy] = useState(false);
   const [monitoringUnsaved, setMonitoringUnsaved] = useState(false), [monitoringError, setMonitoringError] = useState('');
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
-    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
+    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
   const actions = useRef(null);
   const state = foldWorkspace(events);
   const students = mergeWorkspaceStudents(data, state);
@@ -61,12 +62,29 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     const ref = refs.current;
     ref.mounted = true;
     let cancelled = false;
-    loadWorkspace().then((result) => {
-      if (!cancelled && ref.mounted && !ref.api) {
-        if (result) hydrate(result);
-        else { ref.gate.restore(); setCollectionPausedState(ref.gate.paused()); setCollectionReady(true); }
-      }
-    }).catch((err) => { if (!cancelled && ref.mounted && !ref.api) setError(err.message); });
+    async function restoreReadOnly() {
+      const result = await loadWorkspace();
+      if (cancelled || !ref.mounted || ref.api) return;
+      if (result) hydrate(result);
+      else { ref.gate.restore(); setCollectionPausedState(ref.gate.paused()); setCollectionReady(true); }
+    }
+    async function start() {
+      setBusy(true); setProgress('모니터링 준비 중…');
+      try {
+        if (process.env.NEXT_PUBLIC_APP_MODE === 'readonly') { await restoreReadOnly(); return; }
+        // A background setup may use the first login's token, never open OAuth.
+        if (!await initializeConnection({ interactive: false }) || cancelled) return;
+        if (ref.gate.ended()) { setProgress('모니터링 종료 · 저장된 기록 보기'); return; }
+        ref.live = true; setRunning(true); setProgress('학생 작업 확인을 시작합니다.');
+      } catch (err) {
+        if (!cancelled && ref.mounted && !ref.api) {
+          setError(`모니터링을 시작하지 못했습니다. ${err.message}`);
+          try { await restoreReadOnly(); }
+          catch (restoreError) { if (!cancelled && ref.mounted) setError(`${err.message} ${restoreError.message}`); }
+        }
+      } finally { if (!cancelled && ref.mounted) setBusy(false); }
+    }
+    void start();
     return () => { cancelled = true; ref.mounted = false; ref.continuous = false; clearTimeout(ref.timer); };
     // The component is keyed by assignment + initial load. Auth is read when called.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,18 +102,23 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     catch (err) { setError(err.message); return false; }
   }
   async function connect({ purpose = 'records' } = {}) {
-    if (busy) return;
+    if (refs.current.collecting) return false;
     setBusy(true); setError('');
     try {
-      const api = await authorize();
-      const result = await api.initialize();
-      if (!refs.current.mounted) return;
-      refs.current.api = api;
-      refs.current.sessionId = crypto.randomUUID(); refs.current.continuous = false;
-      resetIdleWatch();
-      hydrate(result); setEnabled(true); setProgress(purpose === 'memo' ? '교사 메모를 Google 시트에 저장할 준비가 됐습니다.' : purpose === 'keywords' ? '핵심 키워드를 Google 시트에 저장할 준비가 됐습니다.' : '저장 준비가 완료됐습니다. 현재 작업 확인을 눌러 시작하세요.'); return true;
+      if (!await initializeConnection({ interactive: true })) return false;
+      if (purpose === 'records' && !refs.current.gate.ended() && !refs.current.monitoringBusy) { refs.current.live = true; setRunning(true); }
+      setProgress(refs.current.gate.ended() ? '모니터링 종료 · 저장된 기록 보기' : purpose === 'memo' ? '교사 메모를 Google 시트에 저장할 준비가 됐습니다.' : purpose === 'keywords' ? '핵심 키워드를 Google 시트에 저장할 준비가 됐습니다.' : 'Google 연결을 확인하고 모니터링을 시작합니다.'); return true;
     } catch (err) { if (refs.current.mounted) setError(err.message); return false; }
     finally { if (refs.current.mounted) setBusy(false); }
+  }
+
+  async function initializeConnection(options) {
+    const ref = refs.current;
+    const { api, result } = await ref.connection.connect(authorize, options);
+    if (!ref.mounted) return false;
+    ref.api = api; ref.sessionId = crypto.randomUUID(); ref.continuous = false;
+    resetIdleWatch(); hydrate(result); setEnabled(true);
+    return true;
   }
 
   async function saveMemo(student, text) {

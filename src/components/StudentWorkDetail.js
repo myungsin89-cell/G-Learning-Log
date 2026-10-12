@@ -56,7 +56,7 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [roleBusy, setRoleBusy] = useState(null);
@@ -69,8 +69,8 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
     setRoleBusy(message.id); try { await onConfirmAuthor(message, message.role === 'student' ? 'other' : 'student'); } finally { setRoleBusy(null); }
   }}>{message.role === 'student' ? '학생 작성자 확인 취소' : '학생 작성자로 확인'}</button>;
   return <div className={styles.drawerBody}>
-    {collection && <section className={styles.collectionControl} aria-label="학생별 기록 수집"><div className={styles.panelHeading}><h3>{collection.ended ? '모니터링 종료' : collection.paused ? '기록 중지' : '학생 기록 수집'}</h3>{collection.canChange && <button type="button" className={styles.secondaryButton} disabled={collection.busy} onClick={() => collection.onChange(collection.unsaved || !collection.paused)}>{collection.busy ? '상태 저장 중…' : collection.unsaved ? '중지 상태 다시 저장' : collection.paused ? '기록 재개' : '기록 중지'}</button>}</div><p className={styles.smallNote}>{collection.ended ? '이 과제는 저장된 기록만 보고 있습니다. 새 작업·본문·댓글은 조회하지 않습니다.' : !collection.ready ? '중지 상태를 확인하고 있습니다. 확인 전에는 새 작업·댓글을 조회하지 않습니다.' : collection.paused ? '새 작업·본문·댓글 조회를 중지했습니다. 기존 기록과 Google 원본은 보존합니다.' : '중지하면 이 앱의 새 작업·본문·댓글 조회와 새 작업기록 저장을 멈춥니다.'}</p>{collection.error && <p className={styles.slideError} role="alert">{collection.error}</p>}</section>}
-    <section aria-label="전체 작업 요약"><h3 className={styles.detailTitle}>전체 작업 요약</h3><div className={styles.detailMetrics}>
+    {collection && !collection.ready && <p className={styles.smallNote} role="status">중지 상태를 확인하고 있습니다. 확인 전에는 새 작업·댓글을 조회하지 않습니다.</p>}
+    <section className={styles.workSummary} aria-label="전체 작업 요약"><div className={styles.summaryHeading}><h3 className={styles.detailTitle}>전체 작업 요약</h3>{slideAction}</div><div className={styles.detailMetrics}>
       {[[readOnly ? '전체 글자' : '추가 글자', readOnly ? student.currentCounts?.charCount ?? null : student.chars, readOnly ? averages.wholeChars : averages.chars, '자'], ['슬라이드', student.slides, averages.slides, '장'], ['추가 이미지', student.images, averages.images, '개']].map(([label, value, average, unit]) => <div key={label}><span>{label}</span><strong>{formatAmount(value)}<small>{unit}</small></strong><p>학급 평균 {formatAmount(average == null ? null : Number(average.toFixed(1)))}{unit}</p></div>)}
     </div><p className={styles.smallNote}>{readOnly ? `전체 글자는 템플릿을 포함한 분량입니다. 확인 시각: ${formatCheckedAt(student.currentCounts?.checkedAt || student.checkedAt)} · 미기록 값은 —로 표시` : '같은 과제의 전체 학생 기준 · 기본 글자·이미지 제외 · 슬라이드는 전체 장수'}</p></section>
 

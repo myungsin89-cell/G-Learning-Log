@@ -36,7 +36,7 @@ export default function AssignmentEditDialog({ assignment, existingNames, onSave
         <p className={styles.dialogDescription}>과제 목록에 보이는 제목과 살펴볼 핵심 키워드를 수정하세요.</p>
         <label className={styles.field}>과제 제목<input value={title} onChange={(event) => { setTitle(event.target.value); setError(''); }} maxLength={80} required autoFocus disabled={saving} /></label>
         <div className={styles.field}><span>핵심 키워드 <span className={styles.optional}>선택</span></span><KeywordInput words={keywords} onChange={(value) => { setKeywords(value); setError(''); }} draft={draft} onDraftChange={(value) => { setDraft(value); setError(''); }} disabled={saving} /><small>추가한 키워드는 저장 후 학생 작업 확인에 반영됩니다.</small></div>
-        <p className={real.editNote}>수정 내용은 교사용 Google 시트에 저장되며, 학생에게 이미 배부한 슬라이드와 링크는 그대로 유지됩니다.</p>
+        <p className={real.editNote}>제목은 학생 접속 화면에도 반영됩니다. 학생 슬라이드와 접속 링크 주소는 그대로 유지됩니다.</p>
         {error && <p className={real.editError} role="alert">{error}</p>}
       </div>
       <div className={styles.dialogActions}><button type="button" className={styles.secondaryButton} onClick={close} disabled={saving}>취소</button><button className={styles.primaryButton} disabled={saving}>{saving ? '저장 중…' : '수정 내용 저장'}</button></div>

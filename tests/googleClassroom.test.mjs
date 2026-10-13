@@ -4,6 +4,7 @@ import { createGoogleClassroom, classroomName, classroomKeywords } from '../src/
 import { createGoogleReader } from '../src/lib/googleReadOnly.mjs';
 import { createGoogleWorkspace } from '../src/lib/googleWorkspace.mjs';
 import { foldWorkspace } from '../src/lib/liveWorkRecords.mjs';
+import { JOIN_HEADERS } from '../src/lib/studentEntry.mjs';
 
 const mime = 'application/vnd.google-apps.spreadsheet';
 const deck = { slides: [{ objectId: 'page', pageElements: [{ shape: { text: { textElements: [{ textRun: { content: '기본 틀' } }] } } }, { image: {} }] }] };
@@ -72,8 +73,13 @@ function mockGoogle() {
         if (method === 'POST') { assert.equal(url.searchParams.get('valueInputOption'), 'RAW'); file.tabs[title].push(...body.values); return response({}); }
         if (method === 'PUT') {
           assert.equal(url.searchParams.get('valueInputOption'), 'RAW');
-          const start = Number(address.match(/!A(\d+)/)?.[1]) - 1;
-          body.values.forEach((row, offset) => { file.tabs[title][start + offset] = row; });
+          const [, column, rowNumber] = address.match(/!([A-Z]+)(\d+)/) || [];
+          const start = Number(rowNumber) - 1, columnIndex = [...column].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+          body.values.forEach((row, offset) => {
+            const target = columnIndex ? [...(file.tabs[title][start + offset] || [])] : [];
+            row.forEach((cell, index) => { target[columnIndex + index] = cell; });
+            file.tabs[title][start + offset] = target;
+          });
           return response({});
         }
         const first = Number(address.match(/!A(\d+)/)?.[1] || 1) - 1;
@@ -237,6 +243,40 @@ test('shared student access is the default and publishes only a separate minimal
   assert.deepEqual(foldWorkspace(saved.events).settings.studentEntry, entry);
 });
 
+test('editing a title updates only the public student link title and keeps its URL and roster', async () => {
+  const { fetcher, state } = mockGoogle(), classroom = createGoogleClassroom('test', fetcher);
+  const created = await classroom.createAssignment(assignmentInput);
+  const entryId = created.assignment.studentEntry.id, picker = state.files.get(entryId);
+  const originalColumns = picker.tabs.students.map((row) => row.slice(0, 4));
+  const sourceRows = structuredClone(state.files.get(created.assignment.id).tabs);
+  await classroom.updateStudentEntryTitle({ assignmentId: created.assignment.id, entryId, className: assignmentInput.className, title: ' 오늘의 달 관찰 ' });
+  assert.deepEqual(picker.tabs.students.map((row) => row.slice(0, 4)), originalColumns);
+  assert.deepEqual(picker.tabs.students.slice(1).map((row) => row[4]), ['오늘의 달 관찰', '오늘의 달 관찰']);
+  assert.deepEqual(state.files.get(created.assignment.id).tabs, sourceRows);
+  const writes = state.calls.filter((call) => call.method !== 'GET' && call.path.includes(`/spreadsheets/${entryId}/values/`));
+  assert.equal(writes.at(-1).path, `/v4/spreadsheets/${entryId}/values/'students'!E2:E3`);
+  const count = writes.length;
+  await classroom.updateStudentEntryTitle({ assignmentId: created.assignment.id, entryId, className: assignmentInput.className, title: '오늘의 달 관찰' });
+  assert.equal(state.calls.filter((call) => call.method !== 'GET' && call.path.includes(`/spreadsheets/${entryId}/values/`)).length, count);
+});
+
+test('student link title changes reject foreign or modified public sheets before writing', async () => {
+  const { fetcher, state } = mockGoogle(), classroom = createGoogleClassroom('test', fetcher);
+  const created = await classroom.createAssignment(assignmentInput);
+  const entryId = created.assignment.studentEntry.id, picker = state.files.get(entryId);
+  const update = (overrides = {}) => classroom.updateStudentEntryTitle({ assignmentId: created.assignment.id, entryId, className: assignmentInput.className, title: '새 제목', ...overrides });
+  const before = state.calls.length;
+  await assert.rejects(update({ assignmentId: 'different-assignment' }), /이번에 생성한 파일/);
+  assert.ok(state.calls.slice(before).every((call) => call.method === 'GET'));
+  picker.tabs.students[0][5] = 'unexpected';
+  const next = state.calls.length;
+  await assert.rejects(update(), /명단 형식/);
+  assert.ok(state.calls.slice(next).every((call) => call.method === 'GET'));
+  picker.tabs.students[0] = JOIN_HEADERS;
+  picker.tabs.private_notes = [['비공개 교사 메모']];
+  await assert.rejects(update(), /예상하지 못한 탭/);
+});
+
 test('individual link distribution is selectable and creates no public name picker', async () => {
   const { fetcher, state } = mockGoogle();
   const created = await createGoogleClassroom('test', fetcher).createAssignment({ ...assignmentInput, entryMode: 'individual' });
@@ -250,10 +290,12 @@ test('shared access can be restored after changing preference and reuses its exi
   const workspace = createGoogleWorkspace('test', created.assignment, created.students, fetcher);
   await workspace.initialize();
   await workspace.append([{ id: 'individual-preference', type: 'settings', studentId: '', createdAt: '2026-10-09T01:00:00Z', payload: { studentEntry: { ...created.assignment.studentEntry, mode: 'individual' } } }]);
+  await workspace.append([{ id: 'new-title', type: 'settings', studentId: '', createdAt: '2026-10-09T01:01:00Z', payload: { title: '새 수업 제목' } }]);
   await classroom.createStudentEntry({ assignment: created.assignment, className: assignmentInput.className, students: created.students, jobId: `join:${created.assignment.id}` });
   const events = (await createGoogleReader('test', fetcher).loadWorkspace(created.assignment.id)).events;
   assert.equal(foldWorkspace(events).settings.studentEntry.mode, 'shared'); assert.equal(state.sequence, 6);
   const picker = state.files.get(created.assignment.studentEntry.id);
+  assert.deepEqual(picker.tabs.students.slice(1).map((row) => row[4]), ['새 수업 제목', '새 수업 제목']);
   picker.tabs.private_notes = [['비공개 교사 메모']];
   const before = state.calls.length;
   await assert.rejects(classroom.createStudentEntry({ assignment: created.assignment, className: assignmentInput.className, students: created.students, jobId: `join:${created.assignment.id}` }), /다른 탭/);

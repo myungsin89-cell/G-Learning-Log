@@ -42,7 +42,7 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     catch (err) { const recovered = await find(jobId); if (recovered) return recovered; throw err; }
   }
   async function assertJob(fileId, jobId, kind) {
-    const file = await request('drive', `files/${encodeURIComponent(fileId)}`, { params: [['fields', 'id,ownedByMe,appProperties,permissions(type,role)']] });
+    const file = await request('drive', `files/${encodeURIComponent(fileId)}`, { params: [['fields', 'id,mimeType,ownedByMe,appProperties,permissions(type,role)']] });
     if (!file.ownedByMe || file.appProperties?.gbaeumCreation !== jobId || file.appProperties?.gbaeumStore !== kind) throw new Error('이번에 생성한 파일인지 확인하지 못해 변경하지 않았습니다.');
     const approved = (permission) => (permission.type === 'user' && permission.role === 'owner') || (kind === 'student-join-v2' && permission.type === 'anyone' && permission.role === 'reader');
     if (kind !== 'student-copy-v2' && (!file.permissions?.length || file.permissions.some((permission) => !approved(permission)))) throw new Error('명단과 교사 기록은 비공개 시트에만 저장할 수 있습니다.');
@@ -67,7 +67,10 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     if (!assignment?.id || !jobId || !students.length) throw new Error('학생 접속 링크를 만들 과제와 명단이 필요합니다.');
     parseRosterInput(students.map((student) => `${student.number} ${student.name}`).join('\n'));
     onProgress('공통 학생 접속 링크 만드는 중…');
-    const file = await ensureFile(jobId, `G배움로그_학생접속_[${className}]_[${assignment.name}]`, 'student-join-v2');
+    const workspace = createGoogleWorkspace(accessToken, assignment, students, fetcher);
+    const saved = await workspace.initialize();
+    const displayName = foldWorkspace(saved.events).settings.title || assignment.name;
+    const file = await ensureFile(jobId, `G배움로그_학생접속_[${className}]_[${displayName}]`, 'student-join-v2');
     await assertJob(file.id, jobId, 'student-join-v2');
     const titles = await tabs(file.id, ['students']);
     for (const title of titles.filter((title) => title !== 'students')) {
@@ -77,17 +80,34 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     // teacher feedback, settings or private notes into this sheet.
     const old = await read(file.id, "'students'!A:Z");
     if (old.length && (JSON.stringify(old[0]) !== JSON.stringify(JOIN_HEADERS) || old.some((row) => row.slice(5).some((cell) => cell !== '')))) throw new Error('학생 접속용 시트에 다른 내용이 있어 공유나 덮어쓰기를 중단했습니다.');
-    await write(file.id, "'students'!A1:E" + (students.length + 1), [JOIN_HEADERS, ...students.map((student) => [student.number, student.name, student.slideId || '', className, assignment.name])]);
+    await write(file.id, "'students'!A1:E" + (students.length + 1), [JOIN_HEADERS, ...students.map((student) => [student.number, student.name, student.slideId || '', className, displayName])]);
     const permissions = await request('drive', `files/${encodeURIComponent(file.id)}/permissions`, { params: [['fields', 'permissions(type,role)']] });
     if (!permissions.permissions?.some((permission) => permission.type === 'anyone' && permission.role === 'reader')) await request('drive', `files/${encodeURIComponent(file.id)}/permissions`, { method: 'POST', body: { type: 'anyone', role: 'reader', allowFileDiscovery: false } });
-    const workspace = createGoogleWorkspace(accessToken, assignment, students, fetcher);
-    const saved = await workspace.initialize();
     const entry = { id: file.id, mode: 'shared' };
     if (JSON.stringify(foldWorkspace(saved.events).settings.studentEntry) !== JSON.stringify(entry)) await workspace.append([{ id: crypto.randomUUID(), type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload: { studentEntry: entry } }]);
     return entry;
   }
   return {
     createStudentEntry: studentEntry,
+    async updateStudentEntryTitle({ assignmentId, entryId, className: inputClass, title: inputTitle }) {
+      if (!assignmentId || !entryId) throw new Error('학생 접속 링크를 찾을 수 없습니다.');
+      const className = classroomName(inputClass), title = classroomName(inputTitle);
+      const file = await assertJob(entryId, `join:${assignmentId}`, 'student-join-v2');
+      if (file.mimeType !== 'application/vnd.google-apps.spreadsheet') throw new Error('학생 접속 시트 형식을 확인할 수 없어 제목을 변경하지 않았습니다.');
+      const metadata = await request('sheets', `spreadsheets/${encodeURIComponent(entryId)}`, { params: [['fields', 'sheets(properties(title))']] });
+      const titles = (metadata.sheets || []).map((sheet) => sheet.properties.title);
+      if (!titles.includes('students') || titles.some((name) => !['students', 'Sheet1'].includes(name))) throw new Error('학생 접속 시트에 예상하지 못한 탭이 있어 제목을 변경하지 않았습니다.');
+      if (titles.includes('Sheet1') && (await read(entryId, "'Sheet1'!A:Z")).some((row) => row.some((cell) => cell !== ''))) throw new Error('학생 접속 시트의 다른 탭에 내용이 있어 제목을 변경하지 않았습니다.');
+      const rows = await read(entryId, "'students'!A:Z");
+      const students = rows.slice(1), seen = new Set();
+      if (JSON.stringify(rows[0]) !== JSON.stringify(JOIN_HEADERS) || !students.length || students.some((row) => {
+        const number = Number(row[0]);
+        if (!Number.isSafeInteger(number) || number < 1 || seen.has(number) || !String(row[1] || '').trim() || row[3] !== className || !String(row[4] || '').trim() || row.slice(5).some((cell) => cell !== '')) return true;
+        seen.add(number); return false;
+      })) throw new Error('학생 접속 명단 형식이 달라 제목을 변경하지 않았습니다.');
+      if (students.every((row) => row[4] === title)) return;
+      await write(entryId, `'students'!E2:E${rows.length}`, students.map(() => [title]));
+    },
     async createClass({ name: inputName, rosterText, privacyConfirmed, jobId, onProgress = () => {} }) {
       if (!jobId || typeof jobId !== 'string') throw new Error('생성 식별자가 필요합니다.');
       const name = classroomName(inputName), students = parseRosterInput(rosterText);

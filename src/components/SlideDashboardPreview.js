@@ -8,7 +8,7 @@ import { createPreviewStudents, createPreviewConversations } from '@/lib/slidePr
 import { studentLabel, unreadCommentActivity, pendingCommentActivity, createSummaryCsv, createAnalysisExport } from '@/lib/workRecords.mjs';
 import StudentWorkDetail from './StudentWorkDetail';
 import StudentRecordControl from './StudentRecordControl';
-import { storeStudentKey } from '@/lib/liveWorkRecords.mjs';
+import { classifyConversations, storeStudentKey } from '@/lib/liveWorkRecords.mjs';
 import StudentAccess from './StudentAccess';
 import KeywordInput from './KeywordInput';
 import { studentKey, formatAmount, formatCheckedAt, createStoredAnalysisExport, summarizeStudentCard } from '@/lib/storedWorkRecords.mjs';
@@ -20,6 +20,7 @@ const previewStatuses = {
   surge: { label: '텍스트 급증', hint: '최근 글자 수가 크게 늘었어요.' },
   unstarted: { label: '첫 기록', hint: '비교할 이전 기록이 없어요.' },
 };
+const emptyCommentState = { messageRoles: {}, identities: {}, commentReviews: {} };
 
 function Icon({ name, size = 18 }) {
   const paths = {
@@ -109,7 +110,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     const current = workspace?.conversations[key] || seedThreads[key] || [];
     const saved = readOnly ? initialData.threads[key] || [] : [];
     const combined = [...saved.filter((thread) => !current.some((item) => item.id === thread.id || item.content === thread.content)), ...current];
-    return [key, workspace ? workspace.classify(combined, student) : combined];
+    return [key, workspace ? workspace.classify(combined, student) : readOnly ? classifyConversations(combined, student, emptyCommentState) : combined];
   }));
   const [notice, setNotice] = useState('');
   const activeStudent = students.find((student) => studentKey(student) === modal?.number);
@@ -119,7 +120,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
   const pending = (student) => pendingActivity(student).total;
   const activityLabel = (student) => {
     const activity = pendingActivity(student);
-    return [activity.student ? `학생 답변 대기 ${activity.student}개` : null, activity.unclassified ? `작성자 확인·답변 대기 ${activity.unclassified}개` : null].filter(Boolean).join(' · ');
+    return [activity.student ? `학생 답변 대기 ${activity.student}개` : null, activity.unclassified ? `댓글 답변 대기 ${activity.unclassified}개` : null].filter(Boolean).join(' · ');
   };
   const commentError = (student) => Boolean(workspace?.commentsErrors[studentKey(student)]);
   const inactiveMinutes = (student) => workspace?.inactiveMinutes?.[studentKey(student)] ?? null;
@@ -180,7 +181,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
       try {
         const conversations = workspace ? await workspace.refreshComments(student) : await onLoadComments(student.slideId);
         if (!workspace) { setThreads((previous) => ({ ...previous, [number]: conversations })); setCommentsLoaded((previous) => [...new Set([...previous, number])]); }
-        setNotice('슬라이드 댓글을 확인했습니다. 학생으로 확인되지 않은 작성자는 따로 표시합니다.');
+        setNotice('슬라이드 댓글을 확인했습니다. 교사 답글을 제외한 댓글은 답변 대상으로 표시합니다.');
       } catch (error) { setNotice(error.message || '댓글을 불러오지 못했습니다.'); }
     }
   }
@@ -306,7 +307,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
         <div className={styles.reportHeading}><div><h2>{className} 종합 기록</h2><p>전체 작업량과 피드백을 비교하고, 학생을 선택해 과정을 살펴보세요.</p></div><div className={styles.exportActions}><button className={styles.secondaryButton} onClick={() => exportRecords('csv')}>종합기록 CSV</button><button className={styles.primaryButton} onClick={() => exportRecords('json')}>전체 기록 JSON</button><button className={styles.textAction} onClick={() => window.print()}>인쇄</button></div></div>
         <p className={styles.reportScope}>{readOnly ? "저장된 자료" : "예시 자료"} · 학급 평균 {formatAmount(averageChars)}자 / 슬라이드 {formatAmount(averages.slides === null ? null : Number(averages.slides.toFixed(1)))}장 / 추가 이미지 {formatAmount(averages.images === null ? null : Number(averages.images.toFixed(1)))}개 · {readOnly ? canWrite ? "앱을 닫거나 다른 탭으로 이동하면 수집하지 않습니다." : "저장된 확인 시점의 수치입니다." : "앱을 닫은 동안에는 수집하지 않습니다."}</p>
         <div className={styles.tableScroll}><table><thead><tr><th scope="col">학생</th><th scope="col">추가 글자</th><th scope="col">슬라이드</th><th scope="col">추가 이미지</th><th scope="col">키워드</th><th scope="col">피드백</th><th scope="col">교사 메모</th></tr></thead><tbody>{students.map((student) => <tr key={studentKey(student)}><th scope="row"><button onClick={() => openStudent(studentKey(student))}>{studentLabel(student)}</button></th><td>{formatAmount(student.chars)}자</td><td>{formatAmount(student.slides)}장</td><td>{formatAmount(student.images)}개</td><td>{readOnly ? `${matched(student).length}개 기록` : `${matched(student).length} / ${keywords.length}`}</td><td><button onClick={() => openStudent(studentKey(student))}>{readOnly ? feedbackLabel(student) : `교사 ${teacherCount(student)} · 학생 글 ${studentCount(student)}`}</button>{pending(student) > 0 ? <span className={styles.tableUnread}>답변 대기 {pending(student)}개</span> : unread(student) > 0 && <span className={styles.tableUnread}>새 댓글 {unread(student)}</span>}</td><td><button className={styles.memoPreview} onClick={() => openStudent(studentKey(student))}>{memos[studentKey(student)] || (readOnly && !canWrite ? '저장된 메모 없음' : '메모 남기기')}</button></td></tr>)}</tbody></table></div>
-        <p className={styles.smallNote}>{readOnly ? "JSON에는 원본 행, 확인 구간과 변화량, 조회된 댓글·답장, 작성자 확인 여부와 비공개 교사 메모를 함께 담습니다. 미기록 값과 댓글 조회 실패도 구분합니다." : "JSON에는 실제 수집 구분, 확인 간격, 변화 기록, 댓글·답장과 교사 메모를 함께 담습니다. 현재 내려받는 자료는 예시 데이터입니다."}</p>
+        <p className={styles.smallNote}>{readOnly ? "JSON에는 원본 행, 확인 구간과 변화량, 조회된 댓글·답장, 작성자 정보와 비공개 교사 메모를 함께 담습니다. 미기록 값과 댓글 조회 실패도 구분합니다." : "JSON에는 실제 수집 구분, 확인 간격, 변화 기록, 댓글·답장과 교사 메모를 함께 담습니다. 현재 내려받는 자료는 예시 데이터입니다."}</p>
       </section>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       <p className={styles.previewNote}>{readOnly ? `작업량은 기록을 확인한 시점 사이의 변화입니다. 확인되지 않은 변화량은 미확인으로 표시합니다.${initialData.unmatchedRecords.length ? ` 학생을 확인할 수 없는 기록 ${initialData.unmatchedRecords.length}개는 전체 기록 JSON에서 확인할 수 있습니다.` : ""}` : "디자인 시안 · 기록과 대화는 예시입니다. 입력한 피드백·메모는 이 화면에서만 보관되며 새로고침하면 초기화됩니다."}</p><MadeByStamp />
@@ -326,7 +327,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
       headingMeta={<StatusBadge status={recordingPaused(activeStudent) ? 'paused' : effectiveStatus(activeStudent)} label={recordingPaused(activeStudent) ? '기록 중지' : statuses[effectiveStatus(activeStudent)].label} />}>
       {inactiveMinutes(activeStudent) !== null && <p className={styles.drawerNotice}>{inactiveMinutes(activeStudent)}분간 변화가 확인되지 않았어요. 읽거나 생각하는 중일 수 있으니 학생의 상황을 함께 살펴보세요.</p>}
       {notice && <p className={styles.drawerNotice} role="status">{notice}</p>}
-      <StudentWorkDetail collection={collectionControl} slideAction={readOnly ? activeStudent.slideUrl ? <a className={`${styles.secondaryButton} ${styles.studentSlideButton}`} href={activeStudent.slideUrl} target="_blank" rel="noopener noreferrer">슬라이드 열기<Icon name="external" size={14} /></a> : <span className={styles.drawerMissingSlide}>슬라이드 미연결</span> : <button className={`${styles.secondaryButton} ${styles.studentSlideButton}`} onClick={() => setNotice('시안에는 실제 학생 슬라이드가 없습니다. Google 연결 후 원본을 열 수 있어요.')}>슬라이드 열기<Icon name="external" size={14} /></button>} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onConfirmAuthor={(message, role) => workspace?.confirmAuthor(activeStudent, message, role)} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
+      <StudentWorkDetail collection={collectionControl} slideAction={readOnly ? activeStudent.slideUrl ? <a className={`${styles.secondaryButton} ${styles.studentSlideButton}`} href={activeStudent.slideUrl} target="_blank" rel="noopener noreferrer">슬라이드 열기<Icon name="external" size={14} /></a> : <span className={styles.drawerMissingSlide}>슬라이드 미연결</span> : <button className={`${styles.secondaryButton} ${styles.studentSlideButton}`} onClick={() => setNotice('시안에는 실제 학생 슬라이드가 없습니다. Google 연결 후 원본을 열 수 있어요.')}>슬라이드 열기<Icon name="external" size={14} /></button>} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
     </PreviewModal>}
   </div>;
 }

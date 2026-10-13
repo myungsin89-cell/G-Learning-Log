@@ -27,7 +27,7 @@ test('teacher and unknown replies never count as new student replies', () => {
   assert.equal(authorRole({}), 'unknown');
 });
 
-test('new top-level comments and replies stay visible before author confirmation', () => {
+test('new top-level comments and replies stay visible without author identity', () => {
   const earlier = '2026-10-08T11:00:00Z', later = '2026-10-08T12:00:00Z';
   const threads = [
     { role: 'other', createdAt: later, replies: [{ role: 'unknown', createdAt: later }, { role: 'teacher', createdAt: later }] },

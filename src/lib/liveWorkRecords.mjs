@@ -93,14 +93,18 @@ export function mergeWorkspaceStudents(data, state) {
 
 export function classifyConversations(threads, student, state) {
   const key = storeStudentKey(student);
-  const classify = (message) => {
+  const classify = (message, origin) => {
     if (message.role === 'teacher') return message;
     const role = state.messageRoles[`${key}:${message.id}`] || (message.authorId && state.identities[`${key}:${message.authorId}`]);
     if (role === 'teacher') return { ...message, role: 'teacher', identityConfirmed: true };
-    const classified = role === 'student' ? { ...message, role: 'student', identityConfirmed: true } : message;
+    // A comment on this student's slide needs a response even when Drive omits its author.
+    // Keep identityConfirmed false unless the author was explicitly identified earlier.
+    const classified = role === 'student' || origin === 'google_slides' || message.role === 'student'
+      ? { ...message, role: 'student', identityConfirmed: role === 'student' || message.identityConfirmed === true }
+      : message;
     return { ...classified, reviewed: state.commentReviews?.[`${key}:${message.id}`] === true };
   };
-  return threads.map((thread) => ({ ...classify(thread), replies: thread.replies.map(classify) }));
+  return threads.map((thread) => ({ ...classify(thread, thread.origin), replies: thread.replies.map((reply) => classify(reply, thread.origin)) }));
 }
 
 export function verifiedChangeBins(records, mode = 'lesson') {

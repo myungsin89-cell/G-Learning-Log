@@ -145,7 +145,7 @@ export function createStoredAnalysisExport(data, threads, commentsLoaded, presen
       charDelta: '저장된 두 확인 시점 사이의 순차이. 모든 타이핑·추가·삭제 횟수가 아님.',
       legacy_unverified: '과거 추정 기록이 섞일 수 있음. 확인된 작업 시점이나 꾸준함의 근거로 사용하지 않음.',
       keywords: '저장된 사용 키워드만 포함. 전체 과제 키워드 목록은 기존 브라우저에만 있을 수 있음.',
-      comments: '열어 본 학생의 댓글만 조회. other/unknown 작성자를 학생으로 단정하지 않음.',
+      comments: '열어 본 학생의 댓글만 조회. 교사 글 외의 슬라이드 댓글은 답변할 학생 글로 표시하지만 작성자 신원은 별도로 확인하지 않음.',
       slideContents: '학생 상세를 열거나 내용 새로고침을 누른 시점의 슬라이드 본문·노트와 수치. 기본 템플릿을 포함한 전체 수치이며 저장된 추가량이나 작업 이력이 아님. 미조회 학생은 null.',
       teacherMemo: '이번 읽기 전용 연결에는 비공개 메모 저장소를 연결하지 않음.',
     },

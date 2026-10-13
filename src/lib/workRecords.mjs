@@ -133,7 +133,7 @@ export function createAnalysisExport({ className, assignment, students, keywords
       null: '확인할 수 없는 값. 0과 구분.',
       template: '추가 글자·이미지는 기본 템플릿 분량을 제외. 슬라이드는 현재 전체 장수.',
       warnings: '텍스트 급증은 확인 필요 표시이며 붙여넣기 판정이 아님.',
-      replies: '교사 작성 글과 학생 답장, 작성자 확인 불가를 구분. 다른 작성자를 자동으로 학생이라고 단정하지 않음.',
+      replies: '교사 글과 학생 슬라이드의 댓글·답글을 구분. 학생 글 표시는 실제 작성자 신원 확인을 뜻하지 않음.',
     },
     collection: { mode, backgroundCollection: false, completeHistory: false },
     averages: { chars: students.reduce((sum, s) => sum + s.chars, 0) / students.length,

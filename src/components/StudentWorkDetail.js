@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { studentLabel, pendingCommentMessages } from '@/lib/workRecords.mjs';
+import { pendingCommentMessages } from '@/lib/workRecords.mjs';
 import { formatAmount, formatCheckedAt } from '@/lib/storedWorkRecords.mjs';
 import CurrentSlideContents from './CurrentSlideContents';
 import StudentActivityGraph from './StudentActivityGraph';
@@ -56,10 +56,9 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
-  const [roleBusy, setRoleBusy] = useState(null);
   const [reviewBusy, setReviewBusy] = useState(null);
   const writable = !readOnly || canWrite;
   const pendingMessages = new Set(pendingCommentMessages(threads));
@@ -67,9 +66,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
   const hasLegacy = readOnly && records.some((record) => record.source === 'legacy_unverified');
   const latest = records.at(-1);
   const surgeSeconds = readOnly ? Math.round((Date.parse(latest?.checkedAt) - Date.parse(latest?.previousCheckedAt)) / 1000) : 25;
-  const authorControl = (message) => readOnly && canWrite && message.role !== 'teacher' && message.origin !== 'stored_feedback' && <button className={styles.authorConfirm} disabled={roleBusy !== null} onClick={async () => {
-    setRoleBusy(message.id); try { await onConfirmAuthor(message, message.role === 'student' ? 'other' : 'student'); } finally { setRoleBusy(null); }
-  }}>{message.role === 'student' ? '학생 확인 취소' : '학생 작성자로 확인'}</button>;
+  const messageLabel = (message, reply = false) => message.role === 'teacher' ? reply ? '선생님 답글' : '선생님' : message.role === 'student' ? reply ? '학생 답글' : '학생 댓글' : message.authorName || '작성자 미확인';
   const canReplyTo = (thread) => writable && !collection?.paused && (!collection || collection.ready) && (!readOnly || thread.origin === 'google_slides');
   const replyEditor = (thread) => <SaveForm label="교사 답글" name="reply" rows={2} reset onSave={(content) => onReply(thread.id, content)} onDone={() => setReplying(null)} buttonLabel="답글 남기기" />;
   const canReviewComment = (thread, message) => readOnly && canWrite && onReviewComment && thread.origin === 'google_slides' && message.role !== 'teacher';
@@ -105,7 +102,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection}><h3>작업 흐름</h3><StudentActivityGraph records={records} templateBaseline={templateBaseline} student={student} /></section>
 
-    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && <span className={styles.newCommentCount}>새 댓글 {unread}개</span>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
+    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && <span className={styles.newCommentCount}>새 댓글 {unread}개</span>}</div><p className={styles.smallNote}>{readOnly ? '학생 슬라이드에 남긴 댓글과 교사 답글을 함께 보여요.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
       {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError}</p>}
       {readOnly && commentsError && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 시도'}</button>}
       <div className={styles.conversationList}>{threads.map((thread) => {
@@ -113,10 +110,10 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
         const lastPending = threadPending.at(-1);
         return <article key={thread.id} className={styles.conversation}>
           {threadPending.length > 0 && <span className={styles.conversationCount} title={`답변 대기 ${threadPending.length}개`} aria-label={`답변 대기 ${threadPending.length}개`}>{threadPending.length > 99 ? '99+' : threadPending.length}</span>}
-          <div className={styles.messageHeader}><div className={styles.authorNameGroup}><strong>{thread.role === 'teacher' ? '선생님' : thread.role === 'student' ? `${studentLabel(student)} 댓글` : thread.authorName ? `${thread.authorName} · 작성자 확인 필요` : '작성자 확인 불가'}</strong>{authorControl(thread)}</div><span>{thread.origin === 'google_slides' ? '슬라이드 댓글' : thread.origin === 'stored_feedback' ? '저장된 피드백 · 작성자/시각 미확인' : '앱에서 작성'} · {readOnly ? formatCheckedAt(thread.createdAt) : time(thread.createdAt)}</span></div>
+          <div className={styles.messageHeader}><strong>{messageLabel(thread)}</strong><span>{thread.origin === 'google_slides' ? '슬라이드 댓글' : thread.origin === 'stored_feedback' ? '저장된 피드백 · 작성자/시각 미확인' : '앱에서 작성'} · {readOnly ? formatCheckedAt(thread.createdAt) : time(thread.createdAt)}</span></div>
           <p>{thread.content}</p>{pendingAction(thread, thread, lastPending)}
           {thread.replies.map((reply) => <div key={reply.id} className={`${styles.replyMessage} ${reply.role === 'student' ? styles.studentReply : ''}`}>
-            <div className={styles.messageHeader}><div className={styles.authorNameGroup}><strong>{reply.role === 'teacher' ? '선생님 답글' : reply.role === 'student' ? `${studentLabel(student)} 답글` : reply.authorName ? `${reply.authorName} · 작성자 확인 필요` : '작성자 확인 불가'}</strong>{authorControl(reply)}</div><span>{readOnly ? formatCheckedAt(reply.createdAt) : time(reply.createdAt)}</span></div>
+            <div className={styles.messageHeader}><strong>{messageLabel(reply, true)}</strong><span>{readOnly ? formatCheckedAt(reply.createdAt) : time(reply.createdAt)}</span></div>
             <p>{reply.content}</p>{pendingAction(thread, reply, lastPending)}
           </div>)}
           {!lastPending && canReplyTo(thread) && (replying === thread.id ? replyEditor(thread) : <button className={styles.textAction} onClick={() => setReplying(thread.id)}>추가 답글 남기기</button>)}

@@ -103,6 +103,7 @@ test('posting a reply clears an anonymous question even when the next comment re
   f.audit.commentThreads = [{ id: 'question', role: 'other', authorName: '익명', createdAt: '2026-10-12T00:00:00Z', origin: 'google_slides', content: '도움이 필요해요', replies: [] }];
   const student = f.current().students[0];
   await act(async () => { await f.current().refreshComments(student); });
+  assert.equal(f.current().classify(f.current().conversations.a, student)[0].role, 'student');
   assert.equal(pendingCommentActivity(f.current().conversations.a).total, 1);
   await act(async () => { assert.equal(await f.current().feedback(student, '함께 살펴볼게요', 'question'), true); });
   assert.deepEqual(f.audit.posts, [{ slideId: 'a', content: '함께 살펴볼게요', commentId: 'question' }]);

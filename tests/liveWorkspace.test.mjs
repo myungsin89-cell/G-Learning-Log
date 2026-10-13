@@ -66,11 +66,20 @@ test('saved notes, read cursors and keyword settings survive reconstruction and 
   assert.equal(state.memos['slide:student-slide'], '다시 저장한 메모'); assert.deepEqual(state.settings.keywords, ['달', '위치']);
 });
 
-test('teacher replies never become student replies, even after an incorrect actor mapping', () => {
+test('teacher replies stay teacher while other slide comments are ready for a student response', () => {
   const state = foldWorkspace([event('teacher-map', 'identity', { authorId: 'teacher', role: 'student' }), event('student-map', 'identity', { authorId: 'child', role: 'student' })]);
-  const threads = classifyConversations([{ id: 'thread', role: 'teacher', authorId: 'teacher', replies: [{ id: 'own', role: 'teacher', authorId: 'teacher', createdAt: '2026-10-09T01:00:30Z' }, { id: 'child-reply', role: 'other', authorId: 'child', createdAt: '2026-10-09T01:00:30Z' }, { id: 'unknown', role: 'unknown', createdAt: '2026-10-09T01:00:30Z' }] }], student, state);
+  const threads = classifyConversations([{ id: 'thread', role: 'teacher', origin: 'google_slides', authorId: 'teacher', replies: [{ id: 'own', role: 'teacher', authorId: 'teacher', createdAt: '2026-10-09T01:00:30Z' }, { id: 'child-reply', role: 'other', authorId: 'child', createdAt: '2026-10-09T01:00:30Z' }, { id: 'unknown', role: 'unknown', createdAt: '2026-10-09T01:00:30Z' }] }], student, state);
   assert.equal(threads[0].role, 'teacher'); assert.equal(threads[0].replies[0].role, 'teacher');
-  assert.equal(unreadStudentReplies(threads, null), 1); assert.equal(unreadStudentReplies(threads, '2026-10-09T01:01:00Z'), 0);
+  assert.equal(threads[0].replies[1].identityConfirmed, true);
+  assert.equal(threads[0].replies[2].role, 'student');
+  assert.equal(threads[0].replies[2].identityConfirmed, false);
+  assert.equal(unreadStudentReplies(threads, null), 2); assert.equal(unreadStudentReplies(threads, '2026-10-09T01:01:00Z'), 0);
+});
+
+test('unknown first comments on a student slide are actionable without confirming an author', () => {
+  const threads = classifyConversations([{ id: 'question', role: 'other', origin: 'google_slides', createdAt: '2026-10-09T01:00:00Z', replies: [] }], student, foldWorkspace([]));
+  assert.equal(threads[0].role, 'student');
+  assert.equal(threads[0].identityConfirmed, false);
 });
 
 test('saved app reply IDs remain teacher replies after reopening when Google omits author identity', () => {

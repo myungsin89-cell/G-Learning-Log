@@ -302,9 +302,6 @@
 .messageHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px; }
 .messageHeader strong { color: #39735a; font-size: 12px; }
 .messageHeader span { color: #718579; font-size: 10px; }
-.authorNameGroup { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.authorConfirm { padding: 3px 0; border: 0; background: none; color: #176344; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.authorConfirm:disabled { opacity: .55; cursor: wait; }
 .conversation p { margin-top: 10px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .replyMessage { margin-top: 14px; padding: 4px 0 4px 13px; border-left: 2px solid #dce9df; }
 .studentReply { border-left-color: #8bb89a; }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, unreadCommentActivity, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
+import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, unreadCommentActivity, pendingCommentActivity, pendingCommentMessages, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
 
 test('a gap or unknown baseline must not be classified as a text surge', () => {
   const change = { charDelta: 500, previousCheckedAt: '2026-10-01T10:00:00Z', checkedAt: '2026-10-04T10:00:00Z', continuous: true };
@@ -37,6 +37,22 @@ test('new top-level comments and replies stay visible before author confirmation
   ];
   assert.deepEqual(unreadCommentActivity(threads, earlier), { total: 3, student: 1, unclassified: 2 });
   assert.deepEqual(unreadCommentActivity(threads, '2026-10-08T13:00:00Z'), { total: 0, student: 0, unclassified: 0 });
+});
+
+test('older unanswered comments remain pending after they are read, and a later teacher reply clears them', () => {
+  const threads = [
+    { id: 'first', role: 'other', createdAt: '2026-10-07T10:00:00Z', replies: [] },
+    { id: 'second', role: 'teacher', createdAt: '2026-10-07T10:00:00Z', replies: [
+      { id: 'student-answer', role: 'student', createdAt: '2026-10-07T10:05:00Z' },
+      { id: 'teacher-answer', role: 'teacher', createdAt: '2026-10-07T10:10:00Z' },
+      { id: 'follow-up', role: 'student', createdAt: '2026-10-07T10:15:00Z' },
+    ] },
+  ];
+  assert.deepEqual(unreadCommentActivity(threads, '2026-10-08T12:00:00Z'), { total: 0, student: 0, unclassified: 0 });
+  assert.deepEqual(pendingCommentMessages(threads).map((message) => message.id), ['first', 'follow-up']);
+  assert.deepEqual(pendingCommentActivity(threads), { total: 2, student: 1, unclassified: 1 });
+  threads[0].replies.push({ id: 'reply', role: 'teacher', createdAt: '2026-10-08T13:00:00Z' });
+  assert.deepEqual(pendingCommentActivity(threads), { total: 1, student: 1, unclassified: 0 });
 });
 
 test('CSV preserves multiline Korean text and neutralizes spreadsheet formulas', () => {

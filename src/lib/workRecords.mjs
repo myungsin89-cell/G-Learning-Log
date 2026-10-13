@@ -45,6 +45,28 @@ export function unreadCommentActivity(threads, readAt) {
   return { total: unread.length, student, unclassified: unread.length - student };
 }
 
+export function pendingCommentMessages(threads) {
+  return threads.flatMap((thread) => {
+    if (thread.origin === 'stored_feedback') return [];
+    const messages = [thread, ...(thread.replies || [])]
+      .filter((message) => !message.deleted && Number.isFinite(Date.parse(message.createdAt)))
+      .map((message, index) => ({ message, index }))
+      .sort((a, b) => Date.parse(a.message.createdAt) - Date.parse(b.message.createdAt) || a.index - b.index);
+    let pending = [];
+    for (const { message } of messages) {
+      if (message.role === 'teacher') pending = [];
+      else pending.push(message);
+    }
+    return pending;
+  });
+}
+
+export function pendingCommentActivity(threads) {
+  const pending = pendingCommentMessages(threads);
+  const student = pending.filter((message) => message.role === 'student').length;
+  return { total: pending.length, student, unclassified: pending.length - student };
+}
+
 export function aggregateLessonRecords(records) {
   const bins = new Map();
   for (const record of records) {

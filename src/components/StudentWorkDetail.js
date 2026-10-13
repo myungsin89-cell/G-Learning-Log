@@ -111,7 +111,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
       <div className={styles.conversationList}>{threads.map((thread) => {
         const threadPending = pendingCommentMessages([thread]);
         const lastPending = threadPending.at(-1);
-        return <article key={thread.id} className={`${styles.conversation} ${threadPending.length ? styles.conversationPending : ''}`}>
+        return <article key={thread.id} className={styles.conversation}>
           {threadPending.length > 0 && <span className={styles.conversationCount} title={`답변 대기 ${threadPending.length}개`} aria-label={`답변 대기 ${threadPending.length}개`}>{threadPending.length > 99 ? '99+' : threadPending.length}</span>}
           <div className={styles.messageHeader}><div className={styles.authorNameGroup}><strong>{thread.role === 'teacher' ? '선생님' : thread.role === 'student' ? `${studentLabel(student)} 댓글` : thread.authorName ? `${thread.authorName} · 작성자 확인 필요` : '작성자 확인 불가'}</strong>{authorControl(thread)}</div><span>{thread.origin === 'google_slides' ? '슬라이드 댓글' : thread.origin === 'stored_feedback' ? '저장된 피드백 · 작성자/시각 미확인' : '앱에서 작성'} · {readOnly ? formatCheckedAt(thread.createdAt) : time(thread.createdAt)}</span></div>
           <p>{thread.content}</p>{pendingAction(thread, thread, lastPending)}

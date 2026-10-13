@@ -87,16 +87,15 @@
 .monitorOverlayIcon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #e3f0e6; color: #246b55; }
 .monitorOverlay h3 { margin-top: 13px; font-size: 17px; color: #203c2b; }
 .monitorOverlay p { max-width: 360px; margin: 9px 0 17px; color: #627568; font-size: 12px; line-height: 1.7; }
-.studentCard { --status-edge: #bac5bd; position: relative; display: block; width: 100%; min-width: 0; padding: 17px 17px 11px; border: 1px solid #e1e9e1; border-top: 3px solid var(--status-edge); border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.studentCard { --status-edge: #bac5bd; display: block; width: 100%; min-width: 0; padding: 17px 17px 11px; border: 1px solid #e1e9e1; border-top: 3px solid var(--status-edge); border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .studentCard:hover { border-color: #9bbfa6; border-top-color: var(--status-edge); background: #fdfefd; }
 .studentCard:focus-visible { outline: 2px solid #246b55; outline-offset: 3px; }
 .cardactive { --status-edge: #478563; } .cardidle { --status-edge: #b89a60; } .cardsurge { --status-edge: #bd7c42; }
 .cardpaused, .cardunstarted { --status-edge: #bac5bd; }
 .studentCardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.studentCardPending .studentCardHeader { padding-left: 27px; }
 .studentIdentity { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
 .studentIdentity > strong { font-size: 14px; font-weight: 740; letter-spacing: -.04em; overflow-wrap: anywhere; }
-.replyCount { position: absolute; top: 15px; left: 15px; display: inline-flex; align-items: center; justify-content: center; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 999px; background: #d93535; color: #fff; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.replyCount { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 999px; background: #d93535; color: #fff; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 5px; font-size: 9px; font-weight: 650; white-space: nowrap; }
 .status i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .status.active { background: #edf5ee; color: #538161; } .status.idle { background: #fbf5e7; color: #a58b55; } .status.surge { background: #faf0e8; color: #b17c53; } .status.unstarted { background: #f0f3ef; color: #8a958c; }
@@ -298,8 +297,7 @@
 .conversationList .feedbackEmpty { margin: 0; padding: 22px 15px; border: 1px solid #e5ece5; border-radius: 9px; background: #fafcf9; color: #718579; font-size: 12px; line-height: 1.8; text-align: center; }
 .replyEmpty { padding: 12px 0 0; color: #819087; font-size: 11px; }
 .conversation { position: relative; padding: 16px; border: 1px solid #e1e9e1; border-radius: 11px; margin-top: 12px; }
-.conversationPending > .messageHeader { padding-left: 29px; }
-.conversationCount { position: absolute; top: 15px; left: 16px; display: inline-flex; align-items: center; justify-content: center; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 999px; background: #d93535; color: #fff; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.conversationCount { position: absolute; z-index: 1; top: -6px; left: -6px; display: inline-flex; align-items: center; justify-content: center; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 999px; background: #d93535; color: #fff; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .messageHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px; }
 .messageHeader strong { color: #39735a; font-size: 12px; }
 .messageHeader span { color: #718579; font-size: 10px; }

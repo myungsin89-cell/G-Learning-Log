@@ -258,6 +258,9 @@ test('editing a title updates only the public student link title and keeps its U
   const count = writes.length;
   await classroom.updateStudentEntryTitle({ assignmentId: created.assignment.id, entryId, className: assignmentInput.className, title: '오늘의 달 관찰' });
   assert.equal(state.calls.filter((call) => call.method !== 'GET' && call.path.includes(`/spreadsheets/${entryId}/values/`)).length, count);
+  assert.equal(await classroom.updateStudentEntryTitle({ assignmentId: created.assignment.id, className: assignmentInput.className, title: '새 제목' }), true);
+  assert.deepEqual(picker.tabs.students.slice(1).map((row) => row[4]), ['새 제목', '새 제목']);
+  assert.equal(await classroom.updateStudentEntryTitle({ assignmentId: 'no-public-picker', className: assignmentInput.className, title: '새 제목', allowMissing: true }), false);
 });
 
 test('student link title changes reject foreign or modified public sheets before writing', async () => {

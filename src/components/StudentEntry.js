@@ -10,9 +10,19 @@ export default function StudentEntry({ sheetId, example = null }) {
   const [data, setData] = useState(example), [error, setError] = useState(''), [search, setSearch] = useState(''), [selected, setSelected] = useState(null), [retry, setRetry] = useState(0);
   useEffect(() => {
     if (example) return;
-    let cancelled = false;
-    loadStudentEntry(sheetId).then((result) => { if (!cancelled) { setData(result); setError(''); } }).catch((err) => { if (!cancelled) setError(err.message); });
-    return () => { cancelled = true; };
+    let cancelled = false, loading = false;
+    const refresh = async () => {
+      if (loading) return;
+      loading = true;
+      try { const result = await loadStudentEntry(sheetId); if (!cancelled) { setData(result); setError(''); } }
+      catch (err) { if (!cancelled) setError(err.message); }
+      finally { loading = false; }
+    };
+    const whenVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    window.addEventListener('focus', whenVisible);
+    document.addEventListener('visibilitychange', whenVisible);
+    return () => { cancelled = true; window.removeEventListener('focus', whenVisible); document.removeEventListener('visibilitychange', whenVisible); };
   }, [sheetId, example, retry]);
   const visible = (data?.students || []).filter((student) => `${student.number} ${student.name}`.includes(search.trim()));
   return <div className={styles.page}><header className={styles.brand}><BrandMark size={36} /><span>G배움로그</span></header><main className={styles.main}>

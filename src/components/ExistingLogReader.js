@@ -122,12 +122,12 @@ export default function ExistingLogReader() {
     const saved = changed ? await workspace.append([{ id: crypto.randomUUID(), type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload }]) : previous;
     const settings = foldWorkspace(saved.events).settings;
     const updated = assignmentWithSettings(item, settings);
-    setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, ...updated } : assignment));
-    const entryId = settings.studentEntry?.id || item.studentEntry?.id;
-    if (entryId) {
-      try { await createGoogleClassroom(session.accessToken).updateStudentEntryTitle({ assignmentId: item.id, entryId, className: selectedClass.name, title: payload.title }); }
+    const entry = updated.studentEntry;
+    if (entry?.mode !== 'individual') {
+      try { await createGoogleClassroom(session.accessToken).updateStudentEntryTitle({ assignmentId: item.id, entryId: entry?.id, className: selectedClass.name, title: payload.title, allowMissing: !entry }); }
       catch (err) { throw new Error(`카드 제목은 저장했지만 학생 접속 링크의 제목을 바꾸지 못했습니다. ${err.message}`); }
     }
+    setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, ...updated } : assignment));
   }
   function disconnect() {
     coverCache.current.clear(); clearReadOnlySession(); setReader(null); setAccount(null); setClasses([]); setSelectedClass(null); setAssignments([]); setSelectedAssignment(null); setData(null); setError(''); setNotice(''); setRoster(null); setRosterError('');

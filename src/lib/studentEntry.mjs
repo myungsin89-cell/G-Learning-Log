@@ -1,6 +1,7 @@
 import { parsePresentationId } from './slideContents.mjs';
 
 export const JOIN_HEADERS = ['student_number', 'student_name', 'slide_id', 'class_name', 'assignment_name'];
+let queryRequestId = 0;
 export function studentEntryUrl(origin, id) {
   if (!/^[\w-]+$/.test(id || '')) throw new Error('학생 접속 링크가 아직 준비되지 않았습니다.');
   const url = new URL(`/join/${encodeURIComponent(id)}`, origin);
@@ -26,7 +27,7 @@ export function parseStudentEntry(text) {
 export async function loadStudentEntry(id, fetcher = globalThis.fetch) {
   if (!/^[\w-]+$/.test(id || '')) throw new Error('학생 접속 주소를 확인해 주세요.');
   const url = new URL(`https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq`);
-  url.searchParams.set('tqx', 'out:json'); url.searchParams.set('sheet', 'students'); url.searchParams.set('headers', '1');
+  url.searchParams.set('tqx', `out:json;reqId:${Date.now() * 1000 + (queryRequestId++ % 1000)}`); url.searchParams.set('sheet', 'students'); url.searchParams.set('headers', '1');
   const response = await fetcher(url.href, { method: 'GET', credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error('학생 접속 링크를 열 수 없습니다. 선생님께 공유 상태를 확인해 주세요.');
   return parseStudentEntry(await response.text());

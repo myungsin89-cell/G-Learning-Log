@@ -89,8 +89,13 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
   }
   return {
     createStudentEntry: studentEntry,
-    async updateStudentEntryTitle({ assignmentId, entryId, className: inputClass, title: inputTitle }) {
-      if (!assignmentId || !entryId) throw new Error('학생 접속 링크를 찾을 수 없습니다.');
+    async updateStudentEntryTitle({ assignmentId, entryId, className: inputClass, title: inputTitle, allowMissing = false }) {
+      if (!assignmentId) throw new Error('학생 접속 링크를 찾을 수 없습니다.');
+      entryId ||= (await find(`join:${assignmentId}`))?.id;
+      if (!entryId) {
+        if (allowMissing) return false;
+        throw new Error('학생 접속 링크를 찾을 수 없습니다.');
+      }
       const className = classroomName(inputClass), title = classroomName(inputTitle);
       const file = await assertJob(entryId, `join:${assignmentId}`, 'student-join-v2');
       if (file.mimeType !== 'application/vnd.google-apps.spreadsheet') throw new Error('학생 접속 시트 형식을 확인할 수 없어 제목을 변경하지 않았습니다.');
@@ -105,8 +110,11 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
         if (!Number.isSafeInteger(number) || number < 1 || seen.has(number) || !String(row[1] || '').trim() || row[3] !== className || !String(row[4] || '').trim() || row.slice(5).some((cell) => cell !== '')) return true;
         seen.add(number); return false;
       })) throw new Error('학생 접속 명단 형식이 달라 제목을 변경하지 않았습니다.');
-      if (students.every((row) => row[4] === title)) return;
+      if (students.every((row) => row[4] === title)) return true;
       await write(entryId, `'students'!E2:E${rows.length}`, students.map(() => [title]));
+      const rowsAfterSave = await read(entryId, "'students'!A:Z");
+      if (rowsAfterSave.length !== rows.length || rowsAfterSave.slice(1).some((row) => row[4] !== title)) throw new Error('학생 접속 시트에서 변경한 제목을 다시 확인하지 못했습니다. 잠시 후 다시 저장해 주세요.');
+      return true;
     },
     async createClass({ name: inputName, rosterText, privacyConfirmed, jobId, onProgress = () => {} }) {
       if (!jobId || typeof jobId !== 'string') throw new Error('생성 식별자가 필요합니다.');

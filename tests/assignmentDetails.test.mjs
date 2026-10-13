@@ -20,3 +20,9 @@ test('assignment edits validate title and normalize keyword list before saving',
   assert.throws(() => assignmentDetailsPayload('잘못된/이름', []), /이름/);
   assert.throws(() => assignmentDetailsPayload('달', ['가'.repeat(501)]), /500자/);
 });
+
+test('student link metadata saved in settings is retained for title synchronization', () => {
+  const assignment = { id: 'source-sheet', name: '달 관찰' };
+  const studentEntry = { mode: 'shared', id: 'public-picker' };
+  assert.deepEqual(assignmentWithSettings(assignment, { title: '새 제목', studentEntry }).studentEntry, studentEntry);
+});

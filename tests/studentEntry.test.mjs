@@ -21,6 +21,15 @@ test('student access reads only its public picker without teacher auth, API key,
   assert.equal(call.url.searchParams.has('key'), false);
   await assert.rejects(loadStudentEntry('../unsafe'));
 });
+test('student access requests a fresh public title each time it reloads', async () => {
+  const urls = [];
+  let title = '이전 제목';
+  const fetcher = async (url) => { urls.push(new URL(url)); return { ok: true, text: async () => response([[1, '김누리', 'slide-one', '학급', title]]) }; };
+  assert.equal((await loadStudentEntry('public-picker', fetcher)).assignmentName, '이전 제목');
+  title = '새 제목';
+  assert.equal((await loadStudentEntry('public-picker', fetcher)).assignmentName, '새 제목');
+  assert.notEqual(urls[0].searchParams.get('tqx'), urls[1].searchParams.get('tqx'));
+});
 test('student link and downloadable QR encode the exact deployed destination', async () => {
   const link = studentEntryUrl('https://example-school.vercel.app', 'public-picker');
   assert.equal(link, 'https://example-school.vercel.app/join/public-picker');

@@ -8,6 +8,7 @@ export function assignmentWithSettings(assignment, settings = {}) {
     sourceName,
     name: title,
     keywords: Array.isArray(settings.keywords) ? classroomKeywords(settings.keywords) : assignment.keywords || [],
+    studentEntry: settings.studentEntry || assignment.studentEntry || null,
   };
 }
 

@@ -56,7 +56,7 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [roleBusy, setRoleBusy] = useState(null);
@@ -105,9 +105,9 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection}><h3>작업 흐름</h3><StudentActivityGraph records={records} templateBaseline={templateBaseline} student={student} /></section>
 
-    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && writable && <button className={styles.textAction} onClick={onRead}>새 댓글 {unread}개 읽음 표시</button>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
-      {readOnly && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 확인'}</button>}
-      {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError} 댓글 다시 확인을 눌러 재시도할 수 있어요.</p>}
+    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && <span className={styles.newCommentCount}>새 댓글 {unread}개</span>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
+      {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError}</p>}
+      {readOnly && commentsError && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 시도'}</button>}
       <div className={styles.conversationList}>{threads.map((thread) => {
         const threadPending = pendingCommentMessages([thread]);
         const lastPending = threadPending.at(-1);

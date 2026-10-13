@@ -73,6 +73,14 @@ test('teacher replies never become student replies, even after an incorrect acto
   assert.equal(unreadStudentReplies(threads, null), 1); assert.equal(unreadStudentReplies(threads, '2026-10-09T01:01:00Z'), 0);
 });
 
+test('saved app reply IDs remain teacher replies after reopening when Google omits author identity', () => {
+  const state = foldWorkspace([event('posted-reply', 'message_role', { messageId: 'reply-1', role: 'teacher' })]);
+  const threads = classifyConversations([{ id: 'question', role: 'other', createdAt: '2026-10-09T01:00:00Z', replies: [
+    { id: 'reply-1', role: 'unknown', createdAt: '2026-10-09T01:01:00Z' },
+  ] }], student, state);
+  assert.equal(threads[0].replies[0].role, 'teacher');
+});
+
 test('two hours of 30-second observations become six 20-minute bins without filling a three-day gap', () => {
   let previous = makeObservation(observation('2026-10-09T00:00:00Z', 100), null, { sessionId: 'lesson' });
   const records = [];

@@ -300,11 +300,16 @@
 .messageHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px; }
 .messageHeader strong { color: #39735a; font-size: 12px; }
 .messageHeader span { color: #718579; font-size: 10px; }
+.authorNameGroup { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.authorConfirm { padding: 4px 8px; border: 1px solid #96c6a9; border-radius: 5px; background: #e9f5ed; color: #145b3a; font-size: 11px; font-weight: 700; cursor: pointer; }
+.authorConfirm:disabled { opacity: .55; cursor: wait; }
 .conversation p { margin-top: 10px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .replyMessage { margin-top: 14px; padding: 14px; background: #f6f8f4; border-radius: 8px; }
 .studentReply { background: #edf5ee; }
 .pendingSummary { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #fff1f1; color: #9d2929; font-size: 12px; line-height: 1.6; }
-.pendingReplyFlag { display: inline-block; margin-top: 9px; padding: 3px 7px; border-radius: 5px; background: #fff1f1; color: #a82929; font-size: 11px; font-weight: 700; }
+.pendingActionRow { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 11px; }
+.pendingReplyFlag { display: inline-block; padding: 4px 8px; border-radius: 5px; background: #fff1f1; color: #a82929; font-size: 11px; font-weight: 700; }
+.replyAction { padding: 5px 10px; border: 1px solid #2d628f; border-radius: 5px; background: #2d628f; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .formActions { display: flex; justify-content: flex-end; gap: 15px; align-items: center; margin-top: 10px; }
 .detailSection form { margin-top: 16px; }
 .detailSection form > .secondaryButton { margin-top: 12px; }

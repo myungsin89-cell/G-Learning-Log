@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { act, createElement, StrictMode } from 'react';
 import { foldWorkspace } from '../src/lib/liveWorkRecords.mjs';
+import { pendingCommentActivity } from '../src/lib/workRecords.mjs';
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT, mode: process.env.NEXT_PUBLIC_APP_MODE };
@@ -32,13 +33,17 @@ function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoSt
     ...(twoStudents ? [{ id: 'b', slideId: 'b', number: 4, name: '테스트B', records: [], chars: 0, images: 0, slides: 1 }] : []),
   ] };
   const saved = { events: structuredClone(events), storeId: 'test-private-store', invalidRows: [] };
-  const audit = { authorization: [], setups: 0, reads: [], comments: 0, chars: 120, failSetup, failReads: false };
+  const audit = { authorization: [], setups: 0, reads: [], comments: 0, commentThreads: [], posts: [], chars: 120, failSetup, failReads: false };
   const api = {
     initialize: async () => { audit.setups++; if (waitForSetup) await waitForSetup; return structuredClone(saved); },
     append: async (items, { shouldInclude = () => true } = {}) => {
       const state = foldWorkspace(saved.events);
       saved.events.push(...items.filter((item) => shouldInclude(item) && (item.type !== 'snapshot' || (!state.settings.monitoringEnded && !state.collectionPaused[item.studentId]))));
       return structuredClone(saved);
+    },
+    feedback: async (slideId, content, commentId) => {
+      audit.posts.push({ slideId, content, commentId });
+      return { id: 'teacher-reply', content, createdTime: new Date().toISOString(), author: { permissionId: 'teacher' } };
     },
   };
   const callbacks = {
@@ -49,7 +54,7 @@ function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoSt
       if (audit.failReads) throw new Error('접근할 수 없음');
       return { checkedAt: new Date().toISOString(), charCount: audit.chars, imageCount: 1, slideCount: 1, pages: [{ id: 'page', number: 1, chars: audit.chars, images: 1, text: '가'.repeat(audit.chars), notes: '' }] };
     },
-    loadComments: async () => { audit.comments++; return []; },
+    loadComments: async () => { audit.comments++; return structuredClone(audit.commentThreads); },
   };
   let current, root;
   const container = document.createElement('div'); document.body.append(container);
@@ -91,6 +96,19 @@ test('created assignment waits for a teacher start, saves current baselines, the
   assert.equal(f.current().students[0].records.at(-1).source, 'continuous_poll');
   await f.unmount(); await f.mount();
   assert.equal(f.current().monitoringPending, false);
+});
+
+test('posting a reply clears an anonymous question even when the next comment read is stale', async (t) => {
+  const f = fixture(t); await f.mount();
+  f.audit.commentThreads = [{ id: 'question', role: 'other', authorName: '익명', createdAt: '2026-10-12T00:00:00Z', origin: 'google_slides', content: '도움이 필요해요', replies: [] }];
+  const student = f.current().students[0];
+  await act(async () => { await f.current().refreshComments(student); });
+  assert.equal(pendingCommentActivity(f.current().conversations.a).total, 1);
+  await act(async () => { assert.equal(await f.current().feedback(student, '함께 살펴볼게요', 'question'), true); });
+  assert.deepEqual(f.audit.posts, [{ slideId: 'a', content: '함께 살펴볼게요', commentId: 'question' }]);
+  assert.equal(foldWorkspace(f.saved.events).messageRoles['slide:a:teacher-reply'], 'teacher');
+  assert.equal(f.current().conversations.a[0].replies[0].role, 'teacher');
+  assert.equal(pendingCommentActivity(f.current().conversations.a).total, 0);
 });
 
 test('a failed first baseline keeps the assignment in the not-started state', async (t) => {

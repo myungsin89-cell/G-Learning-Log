@@ -95,6 +95,7 @@ export function classifyConversations(threads, student, state) {
   const classify = (message) => {
     if (message.role === 'teacher') return message;
     const role = state.messageRoles[`${key}:${message.id}`] || (message.authorId && state.identities[`${key}:${message.authorId}`]);
+    if (role === 'teacher') return { ...message, role: 'teacher', identityConfirmed: true };
     return role === 'student' ? { ...message, role: 'student', identityConfirmed: true } : message;
   };
   return threads.map((thread) => ({ ...classify(thread), replies: thread.replies.map(classify) }));

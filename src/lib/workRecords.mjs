@@ -36,11 +36,7 @@ export function unreadStudentReplies(threads, readAt) {
 }
 
 export function unreadCommentActivity(threads, readAt) {
-  const messages = threads.flatMap((thread) => thread.origin === 'stored_feedback' ? [] : [thread, ...(thread.replies || [])]);
-  const unread = messages.filter((message) =>
-    !message.deleted && message.role !== 'teacher' &&
-    Number.isFinite(Date.parse(message.createdAt)) && Date.parse(message.createdAt) > (Date.parse(readAt) || 0)
-  );
+  const unread = pendingCommentMessages(threads).filter((message) => Date.parse(message.createdAt) > (Date.parse(readAt) || 0));
   const student = unread.filter((message) => message.role === 'student').length;
   return { total: unread.length, student, unclassified: unread.length - student };
 }
@@ -65,6 +61,26 @@ export function pendingCommentActivity(threads) {
   const pending = pendingCommentMessages(threads);
   const student = pending.filter((message) => message.role === 'student').length;
   return { total: pending.length, student, unclassified: pending.length - student };
+}
+
+export function mergePostedTeacherReplies(fetchedThreads, previousThreads, postedReplies) {
+  if (!postedReplies.length) return fetchedThreads;
+  const threads = [...fetchedThreads];
+  for (const { threadId } of postedReplies) {
+    if (threads.some((thread) => thread.id === threadId)) continue;
+    const previous = previousThreads.find((thread) => thread.id === threadId);
+    if (previous) threads.push(previous);
+  }
+  return threads.map((thread) => {
+    const posted = postedReplies.filter((item) => item.threadId === thread.id).map((item) => item.reply);
+    if (!posted.length) return thread;
+    const replies = (thread.replies || []).map((reply) => {
+      const own = posted.find((item) => item.id === reply.id);
+      return own ? { ...reply, role: 'teacher' } : reply;
+    });
+    replies.push(...posted.filter((reply) => !replies.some((item) => item.id === reply.id)));
+    return { ...thread, replies };
+  });
 }
 
 export function aggregateLessonRecords(records) {

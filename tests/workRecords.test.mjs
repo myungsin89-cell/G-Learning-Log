@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, unreadCommentActivity, pendingCommentActivity, pendingCommentMessages, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
+import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, unreadCommentActivity, pendingCommentActivity, pendingCommentMessages, mergePostedTeacherReplies, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
 
 test('a gap or unknown baseline must not be classified as a text surge', () => {
   const change = { charDelta: 500, previousCheckedAt: '2026-10-01T10:00:00Z', checkedAt: '2026-10-04T10:00:00Z', continuous: true };
@@ -35,7 +35,7 @@ test('new top-level comments and replies stay visible before author confirmation
     { role: 'teacher', createdAt: earlier, replies: [] },
     { role: 'unknown', origin: 'stored_feedback', createdAt: later, replies: [] },
   ];
-  assert.deepEqual(unreadCommentActivity(threads, earlier), { total: 3, student: 1, unclassified: 2 });
+  assert.deepEqual(unreadCommentActivity(threads, earlier), { total: 1, student: 1, unclassified: 0 });
   assert.deepEqual(unreadCommentActivity(threads, '2026-10-08T13:00:00Z'), { total: 0, student: 0, unclassified: 0 });
 });
 
@@ -53,6 +53,22 @@ test('older unanswered comments remain pending after they are read, and a later 
   assert.deepEqual(pendingCommentActivity(threads), { total: 2, student: 1, unclassified: 1 });
   threads[0].replies.push({ id: 'reply', role: 'teacher', createdAt: '2026-10-08T13:00:00Z' });
   assert.deepEqual(pendingCommentActivity(threads), { total: 1, student: 1, unclassified: 0 });
+});
+
+test('a saved teacher reply clears the count even while Google returns a stale or unclassified copy', () => {
+  const thread = { id: 'question', role: 'other', createdAt: '2026-10-08T10:00:00Z', replies: [] };
+  const ownReply = { id: 'answer', role: 'teacher', createdAt: '2026-10-08T10:01:00Z', content: '도와줄게요' };
+  const posted = [{ threadId: thread.id, reply: ownReply }];
+  const immediate = mergePostedTeacherReplies([thread], [thread], posted);
+  assert.equal(pendingCommentActivity(immediate).total, 0);
+  assert.equal(unreadCommentActivity(immediate, null).total, 0);
+  const stale = mergePostedTeacherReplies([{ ...thread, replies: [] }], immediate, posted);
+  assert.equal(stale[0].replies.length, 1);
+  assert.equal(pendingCommentActivity(stale).total, 0);
+  const unclassified = mergePostedTeacherReplies([{ ...thread, replies: [{ ...ownReply, role: 'other' }] }], stale, posted);
+  assert.equal(unclassified[0].replies.length, 1);
+  assert.equal(unclassified[0].replies[0].role, 'teacher');
+  assert.equal(pendingCommentActivity(unclassified).total, 0);
 });
 
 test('CSV preserves multiline Korean text and neutralizes spreadsheet formulas', () => {

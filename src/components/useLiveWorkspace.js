@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { foldWorkspace, makeObservation, mergeWorkspaceStudents, storeStudentKey, classifyConversations } from '@/lib/liveWorkRecords.mjs';
+import { mergePostedTeacherReplies } from '@/lib/workRecords.mjs';
 import { advanceIdleWatch, idleWatchMinutes } from '@/lib/idleWatch.mjs';
 import { StudentCollectionGate, CollectionStoppedError } from '@/lib/studentCollection.mjs';
 import { WorkspaceConnection } from '@/lib/workspaceConnection.mjs';
@@ -27,7 +28,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [monitoringEnded, setMonitoringEndedState] = useState(false), [monitoringBusy, setMonitoringBusy] = useState(false);
   const [monitoringUnsaved, setMonitoringUnsaved] = useState(false), [monitoringError, setMonitoringError] = useState('');
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
-    live: false, skipFirstCycle: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
+    live: false, skipFirstCycle: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), postedReplies: [], monitoringBusy: false });
   const actions = useRef(null);
   const state = foldWorkspace(events);
   const monitoringPending = Boolean(process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && data.assignment.creationId && !state.settings.monitoringStartedAt && !state.settings.monitoringEnded);
@@ -239,7 +240,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     try {
       const threads = (await refs.current.gate.read(storeStudentKey(student), () => loadComments(student.slideId))).data;
       if (refs.current.mounted) {
-        setConversations((previous) => ({ ...previous, [key]: threads }));
+        setConversations((previous) => ({ ...previous, [key]: mergePostedTeacherReplies(threads, previous[key] || [], refs.current.postedReplies.filter((item) => item.studentId === key)) }));
         setCommentsLoaded((previous) => [...new Set([...previous, key])]);
         setCommentsErrors((previous) => ({ ...previous, [key]: '' }));
       }
@@ -249,10 +250,19 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   async function feedback(student, content, commentId = null) {
     if (!refs.current.api) { setError('Google 저장 권한을 연결해 주세요.'); return false; }
     setError('');
+    let saved;
     try {
       if (!refs.current.gate.ticket(storeStudentKey(student))) throw new CollectionStoppedError(refs.current.gate.ready, refs.current.gate.ended());
-      await refs.current.api.feedback(student.slideId, content, commentId);
+      saved = await refs.current.api.feedback(student.slideId, content, commentId);
     } catch (err) { setError(`${err.message} 같은 글을 다시 보내기 전에 댓글을 새로고침해 확인해 주세요.`); return false; }
+    if (commentId && saved?.id) {
+      const reply = { id: saved.id, role: 'teacher', authorName: saved.author?.displayName || null,
+        content: saved.content || content.trim(), createdAt: saved.createdTime || new Date().toISOString() };
+      refs.current.postedReplies.push({ studentId: student.id, threadId: commentId, reply });
+      if (refs.current.mounted) setConversations((previous) => ({ ...previous, [student.id]: mergePostedTeacherReplies(previous[student.id] || [], previous[student.id] || [], refs.current.postedReplies.filter((item) => item.studentId === student.id)) }));
+      try { hydrate(await refs.current.api.append([event('message_role', student, { messageId: saved.id, role: 'teacher' })])); }
+      catch { setError('답글은 슬라이드에 저장됐지만 교사 작성 표시를 별도로 저장하지 못했습니다. 다시 보내지 말고 댓글을 새로고침해 확인해 주세요.'); }
+    }
     try { await refreshComments(student); }
     catch { setError('피드백을 저장했지만 댓글을 다시 불러오지 못했습니다. 같은 글을 다시 보내지 말고 댓글을 새로고침해 주세요.'); }
     return true;

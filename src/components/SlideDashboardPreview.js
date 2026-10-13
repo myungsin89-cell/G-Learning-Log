@@ -42,7 +42,7 @@ function StatusBadge({ status, label }) {
   return <span className={`${styles.status} ${styles[status]}`}><i />{label || previewStatuses[status].label}</span>;
 }
 
-function PreviewModal({ title, onClose, drawer = false, headingMeta, footerAction, children, locked = false }) {
+function PreviewModal({ title, onClose, drawer = false, headingMeta, headerAction, footerAction, children, locked = false }) {
   const ref = useRef(null);
   const titleId = useId();
   useEffect(() => {
@@ -53,7 +53,7 @@ function PreviewModal({ title, onClose, drawer = false, headingMeta, footerActio
   return <dialog ref={ref} className={drawer ? styles.drawer : styles.modal} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); if (!locked) onClose(); }} onClick={(event) => { if (!locked && event.target === event.currentTarget) onClose(); }}>
     <div className={`${styles.modalHeader} ${drawer ? styles.drawerHeader : ''}`}>
       {drawer ? <div className={styles.drawerHeading}>{headingMeta}<h2 id={titleId}>{title}</h2></div> : <h2 id={titleId}>{title}</h2>}
-      <button className={styles.iconButton} aria-label="닫기" onClick={onClose} disabled={locked}><Icon name="close" /></button>
+      {drawer ? <div className={styles.drawerHeaderActions}>{headerAction}<button className={styles.iconButton} aria-label="닫기" onClick={onClose} disabled={locked}><Icon name="close" /></button></div> : <button className={styles.iconButton} aria-label="닫기" onClick={onClose} disabled={locked}><Icon name="close" /></button>}
     </div>
     {children}
     {footerAction}
@@ -114,6 +114,11 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
   }));
   const [notice, setNotice] = useState('');
   const activeStudent = students.find((student) => studentKey(student) === modal?.number);
+  const slideAction = !activeStudent ? null : readOnly
+    ? activeStudent.slideUrl
+      ? <a className={`${styles.primaryButton} ${styles.studentSlideButton}`} href={activeStudent.slideUrl} target="_blank" rel="noopener noreferrer">슬라이드 열기<Icon name="external" size={14} /></a>
+      : <span className={styles.drawerMissingSlide}>슬라이드 미연결</span>
+    : <button className={`${styles.primaryButton} ${styles.studentSlideButton}`} onClick={() => setNotice('시안에는 실제 학생 슬라이드가 없습니다. Google 연결 후 원본을 열 수 있어요.')}>슬라이드 열기<Icon name="external" size={14} /></button>;
   const commentActivity = (student) => unreadCommentActivity(threads[studentKey(student)] || [], readAt[studentKey(student)]);
   const unread = (student) => commentActivity(student).total;
   const pendingActivity = (student) => pendingCommentActivity(threads[studentKey(student)] || []);
@@ -323,11 +328,12 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     {modal?.type === 'student-access' && <StudentAccess className={className} assignment={assignment} students={students} entry={workspace?.state.settings.studentEntry || assignment.studentEntry} onConfigure={onConfigureEntry} onClose={() => setModal(null)} />}
     {modal?.type === 'join' && <PreviewModal title="학생 접속 안내" onClose={() => setModal(null)}><div className={styles.modalBody}><p className={styles.joinDescription}>학생은 과제 링크로 들어와<br />접속 코드를 입력하고 본인 번호를 선택해요.</p><p className={styles.codeLabel}>접속 코드 예시</p><div className={styles.joinCode}>2684</div><p className={styles.smallNote}>화면 구성을 위한 예시입니다. 실제 접속 링크와 QR은 Google 연결 후 제공됩니다.</p></div><div className={styles.modalActions}><button className={styles.primaryButton} onClick={() => setModal(null)}>확인</button></div></PreviewModal>}
     {modal?.type === 'student' && activeStudent && <PreviewModal drawer title={`${studentLabel(activeStudent)} 작업 기록`} onClose={() => setModal(null)}
+      headerAction={slideAction}
       footerAction={<StudentRecordControl collection={collectionControl} />}
       headingMeta={<StatusBadge status={recordingPaused(activeStudent) ? 'paused' : effectiveStatus(activeStudent)} label={recordingPaused(activeStudent) ? '기록 중지' : statuses[effectiveStatus(activeStudent)].label} />}>
       {inactiveMinutes(activeStudent) !== null && <p className={styles.drawerNotice}>{inactiveMinutes(activeStudent)}분간 변화가 확인되지 않았어요. 읽거나 생각하는 중일 수 있으니 학생의 상황을 함께 살펴보세요.</p>}
       {notice && <p className={styles.drawerNotice} role="status">{notice}</p>}
-      <StudentWorkDetail collection={collectionControl} slideAction={readOnly ? activeStudent.slideUrl ? <a className={`${styles.secondaryButton} ${styles.studentSlideButton}`} href={activeStudent.slideUrl} target="_blank" rel="noopener noreferrer">슬라이드 열기<Icon name="external" size={14} /></a> : <span className={styles.drawerMissingSlide}>슬라이드 미연결</span> : <button className={`${styles.secondaryButton} ${styles.studentSlideButton}`} onClick={() => setNotice('시안에는 실제 학생 슬라이드가 없습니다. Google 연결 후 원본을 열 수 있어요.')}>슬라이드 열기<Icon name="external" size={14} /></button>} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
+      <StudentWorkDetail collection={collectionControl} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
     </PreviewModal>}
   </div>;
 }

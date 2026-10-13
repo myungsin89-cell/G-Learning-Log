@@ -142,8 +142,9 @@
 .drawerHeader { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 12px; background: #fff; flex-shrink: 0; }
 .drawerHeading { min-width: 0; } .drawerHeading h2 { font-size: 18px; line-height: 1.5; word-break: keep-all; }
 .drawerHeading > .status { margin-bottom: 6px; }
-.studentSlideButton { min-height: 36px; padding: 0 11px; font-size: 11px; color: #246b55; border-color: #bed2c3; text-decoration: none; }
-.studentSlideButton:hover { background: #f3f8f3; border-color: #84aa90; }
+.drawerHeaderActions { display: flex; align-items: center; align-self: end; gap: 8px; }
+.studentSlideButton { min-height: 36px; padding: 0 12px; border-color: #246b55; background: #246b55; color: #fff; font-size: 11px; text-decoration: none; }
+.studentSlideButton:hover { border-color: #1d5945; background: #1d5945; }
 .drawerMissingSlide { color: #819087; font-size: 11px; }
 .detailTabs { display: flex; gap: 24px; padding: 0 26px; border-bottom: 1px solid #edf1ec; }
 .detailTabs button { padding: 13px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: #819087; font: inherit; font-size: 13px; cursor: pointer; } .detailTabs .selectedDetail { color: #246b55; border-bottom-color: #246b55; font-weight: 730; }
@@ -188,7 +189,6 @@
 .recordListControls .smallNote { margin: 0; }
 .workSummary { padding: 17px; border: 1px solid #e1e9e1; border-radius: 12px; background: #f8faf6; }
 .summaryHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #e1e9e1; }
-.summaryHeading .studentSlideButton { background: #fff; min-height: 34px; }
 .workSummary .detailMetrics { margin-top: 16px; padding: 0; border-radius: 0; background: none; }
 .workSummary > .smallNote { margin-top: 16px; }
 .recordControlFooter { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 5px 14px; padding: 12px 26px; border-top: 1px solid #e3eae3; background: #fff; flex-shrink: 0; }
@@ -357,7 +357,7 @@
   .metrics > span > strong { font-size: 18px; } .metrics small { font-size: 8px; } .metrics em { font-size: 8px; margin-left: 1px; }
   .cardKeywords { gap: 5px; } .keywordDots { display: none; } .studentCardFooter { flex-wrap: wrap; gap: 4px; } .sparkline { width: 50px; height: 18px; }
   .drawer { border-radius: 0; } .modalHeader, .modalBody, .drawerBody { padding-left: 21px; padding-right: 21px; }
-  .drawerHeader { grid-template-columns: minmax(0,1fr) auto; } .drawerHeader > .iconButton { grid-column: 2; grid-row: 1; align-self: start; }
+  .drawerHeader { grid-template-columns: minmax(0,1fr) auto; }
   .report { padding: 18px; } .reportHeading { align-items: flex-start; flex-direction: column; } .reportHeading h2 { font-size: 19px; }
 }
 @media (max-width: 350px) { .studentGrid { grid-template-columns: 1fr; } .reviewList { grid-template-columns: 1fr; } }

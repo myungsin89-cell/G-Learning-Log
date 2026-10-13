@@ -366,6 +366,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     saveMemo,
     markRead: (student) => save('read', student, { at: new Date().toISOString() }),
     review: (student, value) => save('review', student, { value, recordId: student.records.at(-1)?.id }),
+    reviewComment: (student, message, reviewed) => save('comment_review', student, { messageId: message.id, reviewed }),
     confirmAuthor: (student, message, role = 'student') => message.role === 'teacher' ? Promise.resolve(false) : save(message.authorId ? 'identity' : 'message_role', student, message.authorId ? { authorId: message.authorId, role } : { messageId: message.id, role }),
     saveKeywords,
     refreshSettings: async () => { const result = await loadWorkspace(); if (result) hydrate(result); },

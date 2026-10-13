@@ -56,10 +56,11 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, pending, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, pending, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [roleBusy, setRoleBusy] = useState(null);
+  const [reviewBusy, setReviewBusy] = useState(null);
   const writable = !readOnly || canWrite;
   const pendingMessages = new Set(pendingCommentMessages(threads));
   const records = readOnly ? student.records : mode === 'lesson' ? student.lessonRecords : student.projectRecords;
@@ -71,12 +72,24 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
   }}>{message.role === 'student' ? '학생 확인 취소' : '학생 작성자로 확인'}</button>;
   const canReplyTo = (thread) => writable && !collection?.paused && (!collection || collection.ready) && (!readOnly || thread.origin === 'google_slides');
   const replyEditor = (thread) => <SaveForm label="교사 답글" name="reply" rows={2} reset onSave={(content) => onReply(thread.id, content)} onDone={() => setReplying(null)} buttonLabel="답글 남기기" />;
-  const pendingAction = (thread, message, lastPending) => pendingMessages.has(message) && <>
-    <div className={styles.pendingActionRow}><span className={styles.pendingReplyFlag}>답변 대기</span>
-      {canReplyTo(thread) && lastPending === message && replying !== thread.id && <button className={styles.replyAction} onClick={() => setReplying(thread.id)}>답글 남기기</button>}
-    </div>
-    {canReplyTo(thread) && lastPending === message && replying === thread.id && replyEditor(thread)}
-  </>;
+  const canReviewComment = (thread, message) => readOnly && canWrite && onReviewComment && thread.origin === 'google_slides' && message.role !== 'teacher';
+  const setCommentReviewed = async (message, value) => {
+    setReviewBusy(message.id);
+    try { if (await onReviewComment(message, value) !== false && value) setReplying(null); } finally { setReviewBusy(null); }
+  };
+  const pendingAction = (thread, message, lastPending) => {
+    const isPending = pendingMessages.has(message);
+    const isReviewed = message.reviewed === true && message.role !== 'teacher';
+    if (!isPending && !isReviewed) return null;
+    return <>
+      <div className={styles.pendingActionRow}>
+        <span className={isReviewed ? styles.reviewedReplyFlag : styles.pendingReplyFlag}>{isReviewed ? '확인 완료' : '답변 대기'}</span>
+        {isPending && canReplyTo(thread) && lastPending === message && replying !== thread.id && <button className={styles.replyAction} onClick={() => setReplying(thread.id)}>답글 남기기</button>}
+        {canReviewComment(thread, message) && <button className={styles.reviewAction} disabled={reviewBusy !== null} onClick={() => setCommentReviewed(message, !isReviewed)}>{reviewBusy === message.id ? '저장 중…' : isReviewed ? '되돌리기' : '답글 없이 확인 완료'}</button>}
+      </div>
+      {isPending && canReplyTo(thread) && lastPending === message && replying === thread.id && replyEditor(thread)}
+    </>;
+  };
   return <div className={styles.drawerBody}>
     {collection && !collection.ready && <p className={styles.smallNote} role="status">중지 상태를 확인하고 있습니다. 확인 전에는 새 작업·댓글을 조회하지 않습니다.</p>}
     <section className={styles.workSummary} aria-label="전체 작업 요약"><div className={styles.summaryHeading}><h3 className={styles.detailTitle}>전체 작업 요약</h3>{slideAction}</div><div className={styles.detailMetrics}>
@@ -92,7 +105,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection}><h3>작업 흐름</h3><StudentActivityGraph records={records} templateBaseline={templateBaseline} student={student} /></section>
 
-    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && writable && <button className={styles.textAction} onClick={onRead}>새 댓글 {unread}개 확인 완료</button>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>{pending > 0 && <p className={styles.pendingSummary} role="status">답변을 기다리는 댓글 {pending}개 · 읽음 표시를 해도 교사가 답할 때까지 남아요.</p>}
+    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && writable && <button className={styles.textAction} onClick={onRead}>새 댓글 {unread}개 읽음 표시</button>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>{pending > 0 && <p className={styles.pendingSummary} role="status">답변을 기다리는 댓글 {pending}개 · 답글을 남기거나 확인 완료로 처리하면 대기 목록에서 빠져요.</p>}
       {readOnly && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 확인'}</button>}
       {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError} 댓글 다시 확인을 눌러 재시도할 수 있어요.</p>}
       <div className={styles.conversationList}>{threads.map((thread) => {

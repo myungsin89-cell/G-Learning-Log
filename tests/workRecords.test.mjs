@@ -71,6 +71,16 @@ test('a saved teacher reply clears the count even while Google returns a stale o
   assert.equal(pendingCommentActivity(unclassified).total, 0);
 });
 
+test('reviewing a comment clears its pending and unread counts without a reply, while a new follow-up is pending', () => {
+  const thread = { id: 'question', role: 'other', reviewed: true, createdAt: '2026-10-08T10:00:00Z', replies: [] };
+  assert.equal(pendingCommentActivity([thread]).total, 0);
+  assert.equal(unreadCommentActivity([thread], null).total, 0);
+  thread.replies.push({ id: 'follow-up', role: 'student', createdAt: '2026-10-08T10:10:00Z' });
+  assert.deepEqual(pendingCommentMessages([thread]).map((message) => message.id), ['follow-up']);
+  thread.reviewed = false;
+  assert.deepEqual(pendingCommentMessages([thread]).map((message) => message.id), ['question', 'follow-up']);
+});
+
 test('CSV preserves multiline Korean text and neutralizes spreadsheet formulas', () => {
   const students = [{ number: 4, name: '=1+1', chars: 20, slides: 3, images: 1 }];
   const csv = createSummaryCsv(students, { keywords: ['달'], threads: {}, memos: { 4: '관찰 "메모"\n다음 기록' }, matched: () => ['달'] });

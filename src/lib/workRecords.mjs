@@ -51,7 +51,7 @@ export function pendingCommentMessages(threads) {
     let pending = [];
     for (const { message } of messages) {
       if (message.role === 'teacher') pending = [];
-      else pending.push(message);
+      else if (message.reviewed !== true) pending.push(message);
     }
     return pending;
   });

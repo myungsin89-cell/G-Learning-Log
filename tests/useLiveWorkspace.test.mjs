@@ -111,6 +111,23 @@ test('posting a reply clears an anonymous question even when the next comment re
   assert.equal(pendingCommentActivity(f.current().conversations.a).total, 0);
 });
 
+test('reviewing an unanswered comment saves privately and survives reopening', async (t) => {
+  const f = fixture(t); await f.mount();
+  f.audit.commentThreads = [{ id: 'question', role: 'other', createdAt: '2026-10-12T00:00:00Z', origin: 'google_slides', content: '실수로 보낸 글', replies: [] }];
+  const student = f.current().students[0];
+  await act(async () => { await f.current().refreshComments(student); });
+  const visibleComments = () => f.current().classify(f.current().conversations.a, f.current().students[0]);
+  assert.equal(pendingCommentActivity(visibleComments()).total, 1);
+  await act(async () => { assert.equal(await f.current().reviewComment(student, f.current().conversations.a[0], true), true); });
+  assert.equal(foldWorkspace(f.saved.events).commentReviews['slide:a:question'], true);
+  assert.equal(pendingCommentActivity(visibleComments()).total, 0);
+  await f.unmount(); await f.mount();
+  await act(async () => { await f.current().refreshComments(f.current().students[0]); });
+  assert.equal(visibleComments()[0].reviewed, true);
+  await act(async () => { assert.equal(await f.current().reviewComment(f.current().students[0], f.current().conversations.a[0], false), true); });
+  assert.equal(pendingCommentActivity(visibleComments()).total, 1);
+});
+
 test('a failed first baseline keeps the assignment in the not-started state', async (t) => {
   const f = fixture(t, { newAssignment: true }); await f.mount();
   f.audit.failReads = true;

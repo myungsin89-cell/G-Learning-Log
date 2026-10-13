@@ -81,6 +81,18 @@ test('saved app reply IDs remain teacher replies after reopening when Google omi
   assert.equal(threads[0].replies[0].role, 'teacher');
 });
 
+test('comment review is saved per message and can be undone after reopening', () => {
+  const input = [{ id: 'question', role: 'other', createdAt: '2026-10-09T01:00:00Z', replies: [
+    { id: 'follow-up', role: 'student', createdAt: '2026-10-09T01:01:00Z' },
+  ] }];
+  const reviewed = foldWorkspace([event('review-1', 'comment_review', { messageId: 'question', reviewed: true })]);
+  const classified = classifyConversations(input, student, reviewed);
+  assert.equal(classified[0].reviewed, true);
+  assert.equal(classified[0].replies[0].reviewed, false);
+  const undone = foldWorkspace([event('review-1', 'comment_review', { messageId: 'question', reviewed: true }), event('review-2', 'comment_review', { messageId: 'question', reviewed: false })]);
+  assert.equal(classifyConversations(input, student, undone)[0].reviewed, false);
+});
+
 test('two hours of 30-second observations become six 20-minute bins without filling a three-day gap', () => {
   let previous = makeObservation(observation('2026-10-09T00:00:00Z', 100), null, { sessionId: 'lesson' });
   const records = [];

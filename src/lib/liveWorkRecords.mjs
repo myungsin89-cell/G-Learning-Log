@@ -29,7 +29,7 @@ export function eventRow(event) {
 }
 
 export function foldWorkspace(events) {
-  const result = { snapshots: {}, records: {}, memos: {}, readAt: {}, reviewed: {}, identities: {}, messageRoles: {}, collectionPaused: {}, settings: {}, seen: new Set() };
+  const result = { snapshots: {}, records: {}, memos: {}, readAt: {}, reviewed: {}, commentReviews: {}, identities: {}, messageRoles: {}, collectionPaused: {}, settings: {}, seen: new Set() };
   // Append order, rather than the client's clock, decides the latest saved setting.
   for (const event of events) {
     if (result.seen.has(event.id)) continue;
@@ -43,6 +43,7 @@ export function foldWorkspace(events) {
     else if (event.type === 'review' && typeof payload.value === 'boolean') result.reviewed[key] = { value: payload.value, recordId: payload.recordId };
     else if (event.type === 'identity' && payload.authorId) result.identities[`${key}:${payload.authorId}`] = payload.role;
     else if (event.type === 'message_role' && payload.messageId) result.messageRoles[`${key}:${payload.messageId}`] = payload.role;
+    else if (event.type === 'comment_review' && payload.messageId && typeof payload.reviewed === 'boolean') result.commentReviews[`${key}:${payload.messageId}`] = payload.reviewed;
     else if (event.type === 'collection' && key && typeof payload.paused === 'boolean') result.collectionPaused[key] = payload.paused;
     else if (event.type === 'settings') {
       if (typeof payload.monitoringStartedAt === 'string' && validTime(payload.monitoringStartedAt)) {
@@ -96,7 +97,8 @@ export function classifyConversations(threads, student, state) {
     if (message.role === 'teacher') return message;
     const role = state.messageRoles[`${key}:${message.id}`] || (message.authorId && state.identities[`${key}:${message.authorId}`]);
     if (role === 'teacher') return { ...message, role: 'teacher', identityConfirmed: true };
-    return role === 'student' ? { ...message, role: 'student', identityConfirmed: true } : message;
+    const classified = role === 'student' ? { ...message, role: 'student', identityConfirmed: true } : message;
+    return { ...classified, reviewed: state.commentReviews?.[`${key}:${message.id}`] === true };
   };
   return threads.map((thread) => ({ ...classify(thread), replies: thread.replies.map(classify) }));
 }

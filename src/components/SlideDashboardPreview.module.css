@@ -309,7 +309,11 @@
 .pendingSummary { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #fff1f1; color: #9d2929; font-size: 12px; line-height: 1.6; }
 .pendingActionRow { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 11px; }
 .pendingReplyFlag { display: inline-block; padding: 4px 8px; border-radius: 5px; background: #fff1f1; color: #a82929; font-size: 11px; font-weight: 700; }
+.reviewedReplyFlag { display: inline-block; padding: 4px 8px; border-radius: 5px; background: #e9f5ed; color: #145b3a; font-size: 11px; font-weight: 700; }
 .replyAction { padding: 5px 10px; border: 1px solid #2d628f; border-radius: 5px; background: #2d628f; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+.reviewAction { padding: 5px 10px; border: 1px solid #adb9b3; border-radius: 5px; background: #fff; color: #385048; font-size: 11px; font-weight: 700; cursor: pointer; }
+.reviewAction:hover { background: #f2f7f4; }
+.reviewAction:disabled { opacity: .55; cursor: wait; }
 .formActions { display: flex; justify-content: flex-end; gap: 15px; align-items: center; margin-top: 10px; }
 .detailSection form { margin-top: 16px; }
 .detailSection form > .secondaryButton { margin-top: 12px; }

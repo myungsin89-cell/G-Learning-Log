@@ -172,6 +172,12 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
       for (const { item, ticket } of baselines) if (ids.has(item.id) && ref.gate.accepts(ticket)) ref.studentRevisions.set(ticket.key, `${ticket.monitoringRevision}:${ticket.revision}`);
       ref.continuous = true; ref.skipFirstCycle = true; ref.live = true; setRunning(true); setRunRevision((value) => value + 1);
       setProgress(`모니터링 시작 · ${baselines.length}명 기준 저장 · 30초마다 확인`);
+      void (async () => {
+        for (let index = 0; index < linked.length; index += 3) {
+          if (!ref.mounted || ref.gate.ended()) break;
+          await Promise.allSettled(linked.slice(index, index + 3).filter((student) => ref.gate.ticket(storeStudentKey(student))).map(refreshComments));
+        }
+      })();
       if (failed.length) setMonitoringError(`일부 학생은 시작 기준을 읽지 못했습니다. 다음 확인을 첫 기준으로 저장합니다. ${failed.join(' / ')}`);
       return true;
     } catch (err) { if (ref.mounted) setMonitoringError(`모니터링을 시작하지 못했습니다. ${err.message}`); return false; }

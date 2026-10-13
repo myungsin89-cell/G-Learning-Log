@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGoogleReader, READ_ONLY_SCOPES } from '../src/lib/googleReadOnly.mjs';
 import { adaptStoredAssignment, adaptDriveComments, createStoredAnalysisExport, summarizeStudentCard, storedHistoryBins } from '../src/lib/storedWorkRecords.mjs';
-import { createSummaryCsv, unreadStudentReplies } from '../src/lib/workRecords.mjs';
+import { createSummaryCsv, unreadStudentReplies, unreadCommentActivity } from '../src/lib/workRecords.mjs';
 import { EVENT_HEADERS, eventRow } from '../src/lib/liveWorkRecords.mjs';
 
 const studentHeaders = ['number', 'name', 'slide_id', 'slide_url', 'status', 'last_active_at', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'keywords_used', 'blank_slide_count', 'focus_ratio', 'teacher_feedback'];
@@ -127,13 +127,14 @@ test('custom extension columns never become verified change records', () => {
 test('comments preserve teacher and other authors without inventing student replies', () => {
   const threads = adaptDriveComments([{ id: 'comment', content: '피드백', author: { me: true }, replies: [
     { id: 'teacher', content: '추가 안내', author: { me: true } },
-    { id: 'other', content: '답글', author: { me: false, displayName: '미분류 사용자' } },
+    { id: 'other', content: '답글', createdTime: '2026-10-09T01:00:00Z', author: { me: false, displayName: '미분류 사용자' } },
     { id: 'deleted', deleted: true },
   ] }]);
   assert.equal(threads[0].role, 'teacher');
   assert.equal(threads[0].replies.length, 2);
   assert.equal(threads[0].replies[1].role, 'other');
   assert.equal(unreadStudentReplies(threads, null), 0);
+  assert.deepEqual(unreadCommentActivity(threads, null), { total: 1, student: 0, unclassified: 1 });
   const data = adaptStoredAssignment(input());
   const csv = createSummaryCsv(data.students, { readOnly: true, keywords: data.keywords, threads: data.threads, memos: {}, matched: (student) => student.keywordsUsed });
   assert.ok(csv.includes('저장된 피드백'));

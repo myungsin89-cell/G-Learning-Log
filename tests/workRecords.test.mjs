@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
+import { isTextSurge, parseRosterInput, studentLabel, unreadStudentReplies, unreadCommentActivity, authorRole, createSummaryCsv, createAnalysisExport } from '../src/lib/workRecords.mjs';
 
 test('a gap or unknown baseline must not be classified as a text surge', () => {
   const change = { charDelta: 500, previousCheckedAt: '2026-10-01T10:00:00Z', checkedAt: '2026-10-04T10:00:00Z', continuous: true };
@@ -25,6 +25,18 @@ test('teacher and unknown replies never count as new student replies', () => {
   assert.equal(authorRole({ me: true, displayName: '교사' }), 'teacher');
   assert.equal(authorRole({ me: false, displayName: '다른 사용자' }), 'other');
   assert.equal(authorRole({}), 'unknown');
+});
+
+test('new top-level comments and replies stay visible before author confirmation', () => {
+  const earlier = '2026-10-08T11:00:00Z', later = '2026-10-08T12:00:00Z';
+  const threads = [
+    { role: 'other', createdAt: later, replies: [{ role: 'unknown', createdAt: later }, { role: 'teacher', createdAt: later }] },
+    { role: 'student', createdAt: later, replies: [{ role: 'student', createdAt: earlier }] },
+    { role: 'teacher', createdAt: earlier, replies: [] },
+    { role: 'unknown', origin: 'stored_feedback', createdAt: later, replies: [] },
+  ];
+  assert.deepEqual(unreadCommentActivity(threads, earlier), { total: 3, student: 1, unclassified: 2 });
+  assert.deepEqual(unreadCommentActivity(threads, '2026-10-08T13:00:00Z'), { total: 0, student: 0, unclassified: 0 });
 });
 
 test('CSV preserves multiline Korean text and neutralizes spreadsheet formulas', () => {

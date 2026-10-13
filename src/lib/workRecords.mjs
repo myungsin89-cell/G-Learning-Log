@@ -35,6 +35,16 @@ export function unreadStudentReplies(threads, readAt) {
   ).length;
 }
 
+export function unreadCommentActivity(threads, readAt) {
+  const messages = threads.flatMap((thread) => thread.origin === 'stored_feedback' ? [] : [thread, ...(thread.replies || [])]);
+  const unread = messages.filter((message) =>
+    !message.deleted && message.role !== 'teacher' &&
+    Number.isFinite(Date.parse(message.createdAt)) && Date.parse(message.createdAt) > (Date.parse(readAt) || 0)
+  );
+  const student = unread.filter((message) => message.role === 'student').length;
+  return { total: unread.length, student, unclassified: unread.length - student };
+}
+
 export function aggregateLessonRecords(records) {
   const bins = new Map();
   for (const record of records) {

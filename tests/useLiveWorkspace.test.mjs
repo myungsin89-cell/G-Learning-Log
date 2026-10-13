@@ -82,6 +82,8 @@ test('created assignment waits for a teacher start, saves current baselines, the
   await act(async () => { assert.equal(await f.current().startMonitoring(), true); });
   assert.equal(f.current().monitoringPending, false);
   assert.deepEqual(f.audit.reads, ['a', 'b']);
+  assert.equal(f.audit.comments, 2);
+  assert.equal(f.current().commentsLoaded.length, 2);
   assert.deepEqual(f.current().students.map((student) => student.records.map((record) => record.source)), [['first_snapshot'], ['first_snapshot']]);
   assert.ok(foldWorkspace(f.saved.events).settings.monitoringStartedAt);
   f.audit.chars += 20; await f.tick(30000);

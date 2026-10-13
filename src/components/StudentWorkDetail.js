@@ -56,7 +56,7 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, pending, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, onRead, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, workspaceError, commentsError, onRefreshComments, onConfirmAuthor, presentationState, onRefreshPresentation, templateBaseline, collection, slideAction }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [roleBusy, setRoleBusy] = useState(null);
@@ -83,7 +83,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
     if (!isPending && !isReviewed) return null;
     return <>
       <div className={styles.pendingActionRow}>
-        <span className={isReviewed ? styles.reviewedReplyFlag : styles.pendingReplyFlag}>{isReviewed ? '확인 완료' : '답변 대기'}</span>
+        {isReviewed && <span className={styles.reviewedReplyFlag}>확인 완료</span>}
         {isPending && canReplyTo(thread) && lastPending === message && replying !== thread.id && <button className={styles.replyAction} onClick={() => setReplying(thread.id)}>답글 남기기</button>}
         {canReviewComment(thread, message) && <button className={styles.reviewAction} disabled={reviewBusy !== null} onClick={() => setCommentReviewed(message, !isReviewed)}>{reviewBusy === message.id ? '저장 중…' : isReviewed ? '되돌리기' : '답글 없이 확인 완료'}</button>}
       </div>
@@ -105,12 +105,14 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection}><h3>작업 흐름</h3><StudentActivityGraph records={records} templateBaseline={templateBaseline} student={student} /></section>
 
-    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && writable && <button className={styles.textAction} onClick={onRead}>새 댓글 {unread}개 읽음 표시</button>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>{pending > 0 && <p className={styles.pendingSummary} role="status">답변을 기다리는 댓글 {pending}개 · 답글을 남기거나 확인 완료로 처리하면 대기 목록에서 빠져요.</p>}
+    <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && writable && <button className={styles.textAction} onClick={onRead}>새 댓글 {unread}개 읽음 표시</button>}</div><p className={styles.smallNote}>{readOnly ? '학생의 첫 댓글과 답글을 모두 보여요. 작성자가 확인되지 않은 글은 아래에서 학생 글로 확인할 수 있습니다.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
       {readOnly && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 확인'}</button>}
       {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError} 댓글 다시 확인을 눌러 재시도할 수 있어요.</p>}
       <div className={styles.conversationList}>{threads.map((thread) => {
-        const lastPending = pendingCommentMessages([thread]).at(-1);
-        return <article key={thread.id} className={styles.conversation}>
+        const threadPending = pendingCommentMessages([thread]);
+        const lastPending = threadPending.at(-1);
+        return <article key={thread.id} className={`${styles.conversation} ${threadPending.length ? styles.conversationPending : ''}`}>
+          {threadPending.length > 0 && <span className={styles.conversationCount} title={`답변 대기 ${threadPending.length}개`} aria-label={`답변 대기 ${threadPending.length}개`}>{threadPending.length > 99 ? '99+' : threadPending.length}</span>}
           <div className={styles.messageHeader}><div className={styles.authorNameGroup}><strong>{thread.role === 'teacher' ? '선생님' : thread.role === 'student' ? `${studentLabel(student)} 댓글` : thread.authorName ? `${thread.authorName} · 작성자 확인 필요` : '작성자 확인 불가'}</strong>{authorControl(thread)}</div><span>{thread.origin === 'google_slides' ? '슬라이드 댓글' : thread.origin === 'stored_feedback' ? '저장된 피드백 · 작성자/시각 미확인' : '앱에서 작성'} · {readOnly ? formatCheckedAt(thread.createdAt) : time(thread.createdAt)}</span></div>
           <p>{thread.content}</p>{pendingAction(thread, thread, lastPending)}
           {thread.replies.map((reply) => <div key={reply.id} className={`${styles.replyMessage} ${reply.role === 'student' ? styles.studentReply : ''}`}>

@@ -25,14 +25,14 @@ after(() => {
 });
 
 const control = (id, type, payload, studentId = '') => ({ id, type, studentId, payload, createdAt: '2026-10-12T00:00:00Z' });
-function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoStudents = false } = {}) {
+function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoStudents = false, newAssignment = false } = {}) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.parse('2026-10-12T01:00:00Z') });
-  const data = { assignment: { id: 'test-assignment', templateBaseline: { chars: 120, images: 1 } }, keywords: [], students: [
+  const data = { assignment: { id: 'test-assignment', ...(newAssignment ? { creationId: 'new-assignment-job' } : {}), templateBaseline: { chars: 120, images: 1 } }, keywords: [], students: [
     { id: 'a', slideId: 'a', number: 1, name: '테스트A', records: [], chars: 0, images: 0, slides: 1 },
     ...(twoStudents ? [{ id: 'b', slideId: 'b', number: 4, name: '테스트B', records: [], chars: 0, images: 0, slides: 1 }] : []),
   ] };
   const saved = { events: structuredClone(events), storeId: 'test-private-store', invalidRows: [] };
-  const audit = { authorization: [], setups: 0, reads: [], comments: 0, chars: 120, failSetup };
+  const audit = { authorization: [], setups: 0, reads: [], comments: 0, chars: 120, failSetup, failReads: false };
   const api = {
     initialize: async () => { audit.setups++; if (waitForSetup) await waitForSetup; return structuredClone(saved); },
     append: async (items, { shouldInclude = () => true } = {}) => {
@@ -46,6 +46,7 @@ function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoSt
     loadWorkspace: async () => structuredClone(saved),
     loadPresentation: async (id) => {
       audit.reads.push(id);
+      if (audit.failReads) throw new Error('접근할 수 없음');
       return { checkedAt: new Date().toISOString(), charCount: audit.chars, imageCount: 1, slideCount: 1, pages: [{ id: 'page', number: 1, chars: audit.chars, images: 1, text: '가'.repeat(audit.chars), notes: '' }] };
     },
     loadComments: async () => { audit.comments++; return []; },
@@ -69,6 +70,60 @@ test('opening a new assignment initializes once, checks immediately and records 
   assert.equal(f.current().students[0].records.at(-1).source, 'continuous_poll');
   assert.equal(f.audit.authorization.length, 1);
   await f.unmount(); await f.tick(120000); assert.equal(f.audit.reads.length, 2);
+});
+
+test('created assignment waits for a teacher start, saves current baselines, then records only later changes', async (t) => {
+  const f = fixture(t, { newAssignment: true, twoStudents: true }); await f.mount();
+  assert.equal(f.current().monitoringPending, true);
+  assert.equal(f.current().running, false);
+  assert.deepEqual(f.audit.reads, []);
+  await f.tick(86400000);
+  assert.deepEqual(f.audit.reads, []);
+  await act(async () => { assert.equal(await f.current().startMonitoring(), true); });
+  assert.equal(f.current().monitoringPending, false);
+  assert.deepEqual(f.audit.reads, ['a', 'b']);
+  assert.deepEqual(f.current().students.map((student) => student.records.map((record) => record.source)), [['first_snapshot'], ['first_snapshot']]);
+  assert.ok(foldWorkspace(f.saved.events).settings.monitoringStartedAt);
+  f.audit.chars += 20; await f.tick(30000);
+  assert.equal(f.current().students[0].records.at(-1).charDelta, 20);
+  assert.equal(f.current().students[0].records.at(-1).source, 'continuous_poll');
+  await f.unmount(); await f.mount();
+  assert.equal(f.current().monitoringPending, false);
+});
+
+test('a failed first baseline keeps the assignment in the not-started state', async (t) => {
+  const f = fixture(t, { newAssignment: true }); await f.mount();
+  f.audit.failReads = true;
+  await act(async () => { assert.equal(await f.current().startMonitoring(), false); });
+  assert.equal(f.current().monitoringPending, true);
+  assert.equal(f.current().running, false);
+  assert.equal(foldWorkspace(f.saved.events).settings.monitoringStartedAt, undefined);
+  assert.match(f.current().monitoringError, /접근할 수 없음/);
+});
+
+test('starting an older created assignment resets the lesson comparison without deleting old events', async (t) => {
+  const old = control('old', 'snapshot', { source: 'first_snapshot', checkedAt: '2026-10-11T01:00:00Z', charCount: 120, imageCount: 1, slideCount: 1, pages: [] }, 'slide:a');
+  const f = fixture(t, { newAssignment: true, events: [old] }); await f.mount();
+  assert.equal(f.current().monitoringPending, true);
+  assert.equal(f.current().students[0].records.length, 0);
+  await act(async () => { await f.current().startMonitoring(); });
+  assert.equal(f.current().students[0].records.length, 1);
+  assert.equal(f.current().students[0].records[0].source, 'first_snapshot');
+  assert.ok(f.saved.events.some((event) => event.id === 'old'));
+  f.audit.chars += 5; await f.tick(30000);
+  assert.equal(f.current().students[0].records.at(-1).charDelta, 5);
+});
+
+test('restarting a running lesson takes a fresh baseline and continues after thirty seconds', async (t) => {
+  const f = fixture(t); await f.mount();
+  assert.equal(f.current().running, true);
+  f.audit.chars += 15;
+  await act(async () => { assert.equal(await f.current().startMonitoring(), true); });
+  assert.equal(f.current().students[0].records.length, 1);
+  assert.equal(f.current().students[0].records[0].source, 'first_snapshot');
+  f.audit.chars += 7;
+  await f.tick(30000);
+  assert.equal(f.current().students[0].records.at(-1).charDelta, 7);
 });
 
 test('an ended assignment restores without any student reads and explicit resume does not silently start a cycle', async (t) => {

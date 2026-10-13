@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Image from 'next/image';
 import BrandMark from './BrandMark';
 import MadeByStamp from './MadeByStamp';
+import AssignmentEditDialog from './AssignmentEditDialog';
 import styles from './ClassWorkspacePreview.module.css';
 import real from './ClassWorkspace.module.css';
 
@@ -52,9 +53,16 @@ function AssignmentCover({ assignment }) {
   return <div className={real.assignmentCover}><div className={real.coverFallback}><Image src="/google-slides.svg" width={32} height={40} alt="" /><span>{loading ? '첫 장 불러오는 중…' : assignment.coverError || failedUrl ? '첫 장을 불러오지 못했어요' : '연결된 슬라이드가 없어요'}</span></div></div>;
 }
 
-export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onResume, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
+export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onResume, onEdit, onSaveEdit, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
   const [search, setSearch] = useState('');
   const [showRoster, setShowRoster] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [editError, setEditError] = useState('');
+  async function editAssignment(assignment) {
+    setEditError('');
+    try { setEditing(await onEdit(assignment)); }
+    catch (error) { setEditError(error.message); }
+  }
   const visible = assignments.filter((assignment) => assignment.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   return <div className={styles.page}>
     <header className={styles.header}><div className={styles.headerInner}>
@@ -73,12 +81,14 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
         <div className={styles.toolbar}><div className={real.listActions}><span className={real.listCount}>전체 과제 {assignments.length}개</span><button className={styles.textButton} onClick={onRefresh} disabled={busy}>새로고침</button></div><label className={styles.search}><Icon name="search" size={17} /><input aria-label="과제 검색" placeholder="과제 검색" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
         <div className={styles.grid}>
           {visible.map((assignment) => <article key={assignment.id} className={styles.card}>
-            <div className={styles.cardTop}><span className={styles.tool}><Image src="/google-slides.svg" width={17} height={21} alt="" /> Google Slides</span>{assignment.setupStatus && assignment.setupStatus !== 'ready' && <button className={real.resumeButton} onClick={() => onResume?.(assignment)} disabled={busy}>배부 이어하기</button>}</div>
+            <div className={`${styles.cardTop} ${real.cardTop}`}><span className={styles.tool}><Image src="/google-slides.svg" width={17} height={21} alt="" /> Google Slides</span><div className={real.cardActions}>{assignment.setupStatus && assignment.setupStatus !== 'ready' && <button className={real.resumeButton} onClick={() => onResume?.(assignment)} disabled={busy}>배부 이어하기</button>}{onEdit && <button className={real.editButton} onClick={() => editAssignment(assignment)} disabled={busy} aria-label={`${assignment.name} 수정`}>수정</button>}</div></div>
             <AssignmentCover assignment={assignment} />
             <div className={styles.cardBody}>
               {assignment.createdAt && <p className={styles.cardDate}>{new Date(assignment.createdAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })} 생성</p>}
               <h3>{assignment.name}</h3>
               <p className={styles.cardMeta}>{assignment.summary ? `학생 ${assignment.summary.studentCount}명 · 슬라이드 연결 ${assignment.summary.linkedCount}명` : assignment.summaryError ? '학생 수 미확인' : '학생 목록 확인 중…'}</p>
+              {assignment.keywords?.length > 0 && <div className={styles.keywords} aria-label="핵심 키워드">{assignment.keywords.slice(0, 3).map((word) => <span key={word}>{word}</span>)}{assignment.keywords.length > 3 && <span>+{assignment.keywords.length - 3}</span>}</div>}
+              {assignment.settingsError && <p className={real.summaryError}>수정한 제목과 키워드를 불러오지 못했어요. 수정에서 다시 확인해 주세요.</p>}
               {assignment.summaryError && <p className={real.summaryError}>과제를 열어 기록을 다시 확인해 주세요.</p>}
             </div>
             <button className={styles.cardButton} disabled={busy} onClick={() => onOpen(assignment)} aria-label={`${assignment.name} 학생 작업 살펴보기`}><span>학생 작업 살펴보기</span><Icon name="arrow" size={17} /></button>
@@ -89,5 +99,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
       <MadeByStamp />
     </main>
     {showRoster && <RosterDialog className={classItem.name} roster={roster} error={rosterError} busy={busy} onRetry={onRetryRoster} onClose={() => setShowRoster(false)} />}
+    {editError && <div className={real.editBanner} role="alert">{editError}<button onClick={() => setEditError('')}>닫기</button></div>}
+    {editing && <AssignmentEditDialog key={editing.id} assignment={editing} existingNames={assignments.filter((item) => item.id !== editing.id).map((item) => item.name)} onSave={onSaveEdit} onClose={() => setEditing(null)} />}
   </div>;
 }

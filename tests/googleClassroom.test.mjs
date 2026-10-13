@@ -213,9 +213,9 @@ test('keyword changes and clearing survive new Google connections without modify
   const before = structuredClone(state.files.get(created.assignment.id).tabs);
   const api = createGoogleWorkspace('test', created.assignment, created.students, fetcher);
   await api.initialize();
-  await api.append([{ id: 'edited', type: 'settings', studentId: '', createdAt: '2026-10-09T01:00:00Z', payload: { keywords: ['변경한 단어'] } }]);
+  await api.append([{ id: 'edited', type: 'settings', studentId: '', createdAt: '2026-10-09T01:00:00Z', payload: { title: '오늘의 달 관찰', keywords: ['변경한 단어'] } }]);
   const reader = createGoogleReader('another-device', fetcher);
-  assert.deepEqual(foldWorkspace((await reader.loadWorkspace(created.assignment.id)).events).settings.keywords, ['변경한 단어']);
+  assert.deepEqual(foldWorkspace((await reader.loadWorkspace(created.assignment.id)).events).settings, { keywords: ['변경한 단어'], monitoringStartedAt: null, title: '오늘의 달 관찰', studentEntry: created.assignment.studentEntry });
   await api.append([{ id: 'cleared', type: 'settings', studentId: '', createdAt: '2026-10-09T01:01:00Z', payload: { keywords: [] } }]);
   assert.deepEqual(foldWorkspace((await reader.loadWorkspace(created.assignment.id)).events).settings.keywords, []);
   assert.deepEqual(state.files.get(created.assignment.id).tabs, before);

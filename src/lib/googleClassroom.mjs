@@ -155,10 +155,10 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
         report(`${student.number}번 ${student.name} 슬라이드를 만들었어요.`, 20 + Math.floor((index + 1) / students.length * 65), index + 1);
       }
       report('핵심 키워드와 과제 설정 저장 중…', 85, students.length);
-      const assignment = { id: file.id, name };
+      const assignment = { id: file.id, name, creationId: jobId };
       const workspace = createGoogleWorkspace(accessToken, assignment, savedStudents, fetcher);
       await workspace.initialize();
-      await workspace.append([{ id: `${jobId}:keywords`, type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload: { keywords } }]);
+      await workspace.append([{ id: `${jobId}:keywords`, type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload: { keywords, monitoringStartedAt: null } }]);
       report('과제 설정을 저장했어요.', 92, students.length);
       let entry = { mode: 'individual' };
       if (entryMode === 'shared') {

@@ -11,6 +11,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [storeId, setStoreId] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runRevision, setRunRevision] = useState(0);
   const [idleWatchEnabled, setIdleWatchEnabled] = useState(false);
   const [idleTracks, setIdleTracks] = useState({});
   const [watchClock, setWatchClock] = useState(() => Date.now());
@@ -26,10 +27,12 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [monitoringEnded, setMonitoringEndedState] = useState(false), [monitoringBusy, setMonitoringBusy] = useState(false);
   const [monitoringUnsaved, setMonitoringUnsaved] = useState(false), [monitoringError, setMonitoringError] = useState('');
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
-    live: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
+    live: false, skipFirstCycle: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), monitoringBusy: false });
   const actions = useRef(null);
   const state = foldWorkspace(events);
-  const students = mergeWorkspaceStudents(data, state);
+  const monitoringPending = Boolean(process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && data.assignment.creationId && !state.settings.monitoringStartedAt && !state.settings.monitoringEnded);
+  const students = monitoringPending ? data.students.map((student) => ({ ...student, records: [], chars: null, images: null, slides: null, checkedAt: null, status: 'unstarted', currentCounts: null })) : mergeWorkspaceStudents(data, state);
+  const hasStarted = () => !data.assignment.creationId || Boolean(foldWorkspace(refs.current.events).settings.monitoringStartedAt);
   const resetIdleWatch = useCallback(() => {
     const ref = refs.current;
     ref.idleTracks = {}; ref.watchRevision++;
@@ -75,6 +78,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
         // A background setup may use the first login's token, never open OAuth.
         if (!await initializeConnection({ interactive: false }) || cancelled) return;
         if (ref.gate.ended()) { setProgress('모니터링 종료 · 저장된 기록 보기'); return; }
+        if (!hasStarted()) { setProgress('모니터링 시작을 기다리는 중입니다.'); return; }
         ref.live = true; setRunning(true); setProgress('학생 작업 확인을 시작합니다.');
       } catch (err) {
         if (!cancelled && ref.mounted && !ref.api) {
@@ -106,8 +110,8 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     setBusy(true); setError('');
     try {
       if (!await initializeConnection({ interactive: true })) return false;
-      if (purpose === 'records' && !refs.current.gate.ended() && !refs.current.monitoringBusy) { refs.current.live = true; setRunning(true); }
-      setProgress(refs.current.gate.ended() ? '모니터링 종료 · 저장된 기록 보기' : purpose === 'memo' ? '교사 메모를 Google 시트에 저장할 준비가 됐습니다.' : purpose === 'keywords' ? '핵심 키워드를 Google 시트에 저장할 준비가 됐습니다.' : 'Google 연결을 확인하고 모니터링을 시작합니다.'); return true;
+      if (purpose === 'records' && hasStarted() && !refs.current.gate.ended() && !refs.current.monitoringBusy) { refs.current.live = true; setRunning(true); }
+      setProgress(refs.current.gate.ended() ? '모니터링 종료 · 저장된 기록 보기' : !hasStarted() ? '모니터링 시작을 기다리는 중입니다.' : purpose === 'memo' ? '교사 메모를 Google 시트에 저장할 준비가 됐습니다.' : purpose === 'keywords' ? '핵심 키워드를 Google 시트에 저장할 준비가 됐습니다.' : 'Google 연결을 확인하고 모니터링을 시작합니다.'); return true;
     } catch (err) { if (refs.current.mounted) setError(err.message); return false; }
     finally { if (refs.current.mounted) setBusy(false); }
   }
@@ -137,6 +141,41 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     ref.live = false; ref.continuous = false; clearTimeout(ref.timer);
     ref.sessionId = crypto.randomUUID(); ref.studentRevisions.clear(); resetIdleWatch();
     if (ref.mounted) setRunning(false);
+  }
+  async function startMonitoring() {
+    const ref = refs.current;
+    if (ref.monitoringBusy || ref.collecting || ref.gate.ended() || document.visibilityState !== 'visible') return false;
+    ref.monitoringBusy = true; setMonitoringBusy(true); setMonitoringError('');
+    stopLive();
+    try {
+      if (!ref.api && !await connect({ purpose: 'privacy' })) throw new Error('Google 저장 권한을 연결해 주세요.');
+      const startedAt = new Date().toISOString();
+      const baselines = [], failed = [];
+      const linked = data.students.filter((student) => student.slideId && !ref.gate.paused()[storeStudentKey(student)]);
+      for (let index = 0; index < linked.length; index += 3) {
+        setProgress(`${Math.min(index + 3, linked.length)} / ${linked.length}명 시작 기준 확인 중`);
+        const chunk = linked.slice(index, index + 3);
+        const results = await Promise.allSettled(chunk.map((student) => ref.gate.read(storeStudentKey(student), () => loadPresentation(student.slideId))));
+        results.forEach((result, offset) => {
+          const student = chunk[offset];
+          if (result.status === 'fulfilled') {
+            const { data: presentation, ticket } = result.value;
+            baselines.push({ item: event('snapshot', student, makeObservation(presentation, null, { sessionId: ref.sessionId, keywords: foldWorkspace(ref.events).settings.keywords || data.keywords })), ticket });
+          } else if (!(result.reason instanceof CollectionStoppedError)) failed.push(`${student.number ? `${student.number}번 ` : ''}${student.name}: ${result.reason.message}`);
+        });
+      }
+      if (!ref.mounted || ref.gate.ended()) return false;
+      if (linked.length && !baselines.length && failed.length) throw new Error(`학생 슬라이드의 현재 상태를 읽지 못했습니다. ${failed.join(' / ')}`);
+      const saved = await ref.api.append([event('settings', null, { monitoringStartedAt: startedAt }), ...baselines.map(({ item }) => item)], { shouldInclude: (item) => item.type !== 'snapshot' || ref.gate.accepts(baselines.find(({ item: baseline }) => baseline.id === item.id)?.ticket) });
+      hydrate(saved);
+      const ids = new Set(saved.events.map((item) => item.id));
+      for (const { item, ticket } of baselines) if (ids.has(item.id) && ref.gate.accepts(ticket)) ref.studentRevisions.set(ticket.key, `${ticket.monitoringRevision}:${ticket.revision}`);
+      ref.continuous = true; ref.skipFirstCycle = true; ref.live = true; setRunning(true); setRunRevision((value) => value + 1);
+      setProgress(`모니터링 시작 · ${baselines.length}명 기준 저장 · 30초마다 확인`);
+      if (failed.length) setMonitoringError(`일부 학생은 시작 기준을 읽지 못했습니다. 다음 확인을 첫 기준으로 저장합니다. ${failed.join(' / ')}`);
+      return true;
+    } catch (err) { if (ref.mounted) setMonitoringError(`모니터링을 시작하지 못했습니다. ${err.message}`); return false; }
+    finally { ref.monitoringBusy = false; if (ref.mounted) setMonitoringBusy(false); }
   }
   async function setMonitoringEnded(ended) {
     const ref = refs.current;
@@ -215,7 +254,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
 
   async function collect() {
     const ref = refs.current;
-    if (!ref.api || !ref.gate.ready || ref.gate.ended() || ref.monitoringBusy || ref.collecting || document.visibilityState !== 'visible') return;
+    if (!ref.api || !ref.gate.ready || !hasStarted() || ref.gate.ended() || ref.monitoringBusy || ref.collecting || document.visibilityState !== 'visible') return;
     ref.collecting = true; setBusy(true); setError('');
     const interruptedSession = ref.sessionId, wasContinuous = ref.continuous;
     const watchRevision = ref.watchRevision;
@@ -270,7 +309,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     } finally { ref.collecting = false; if (ref.mounted) setBusy(false); }
   }
   function toggleLive() {
-    if (!refs.current.api || !refs.current.gate.ready || refs.current.gate.ended() || refs.current.monitoringBusy) return;
+    if (!refs.current.api || !refs.current.gate.ready || !hasStarted() || refs.current.gate.ended() || refs.current.monitoringBusy) return;
     refs.current.sessionId = crypto.randomUUID(); refs.current.continuous = false;
     refs.current.live = !refs.current.live;
     resetIdleWatch(); setRunning(refs.current.live);
@@ -291,12 +330,13 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
       if (document.visibilityState === 'visible' && running) void cycle();
     }
     document.addEventListener('visibilitychange', visibility);
-    if (running) void cycle();
+    if (running && ref.skipFirstCycle) { ref.skipFirstCycle = false; ref.continuous = true; ref.timer = setTimeout(cycle, 30000); }
+    else if (running) void cycle();
     return () => { cancelled = true; clearTimeout(ref.timer); document.removeEventListener('visibilitychange', visibility); ref.continuous = false; };
-  }, [running, resetIdleWatch]);
+  }, [running, resetIdleWatch, runRevision]);
 
   return { enabled, running, busy, progress, error, storeId, invalidRows, events, state, students,
-    monitoringEnded, monitoringBusy, monitoringUnsaved, monitoringError, setMonitoringEnded,
+    monitoringPending, monitoringEnded, monitoringBusy, monitoringUnsaved, monitoringError, setMonitoringEnded, startMonitoring,
     collectionPaused, collectionReady, collectionBusy, collectionErrors, collectionUnsaved, setStudentCollection, inspectPresentation,
     idleWatchEnabled, toggleIdleWatch,
     inactiveMinutes: Object.fromEntries(students.map((student) => [student.id,

@@ -22,6 +22,8 @@
 .monitorActions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-left: auto; }
 .monitorActions button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: #68796e; font: inherit; cursor: pointer; padding: 7px 0; }
 .monitorActions .monitorEndButton { border: 1px solid #d4dfd7; border-radius: 7px; background: #f6f8f6; color: #405749; padding: 7px 10px; font-weight: 600; }
+.monitorActions .monitorStartButton { border: 1px solid #246b55; border-radius: 7px; background: #246b55; color: #fff; padding: 8px 11px; font-weight: 700; }
+.monitorActions .monitorStartButton:hover:not(:disabled) { background: #1d5945; }
 .monitorActions button:disabled { opacity: .5; cursor: default; }
 .idleWatchBar { margin-top: 13px; padding-top: 13px; border-top: 1px solid #e3eae3; }
 .idleWatchToggle { position: relative; display: flex; align-items: flex-start; gap: 9px; color: #496654; font-size: 11px; line-height: 1.7; font-weight: 650; word-break: keep-all; cursor: pointer; }
@@ -79,6 +81,12 @@
 .studentFilters button { padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: #7c887e; font: inherit; font-size: 11px; cursor: pointer; }
 .studentFilters .selectedFilter { background: #e7f0e8; color: #246b55; font-weight: 750; }
 .studentGrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); gap: 13px; }
+.studentGridWrap { position: relative; min-height: 230px; }
+.studentGridPending .studentGrid { filter: blur(2px); opacity: .38; pointer-events: none; user-select: none; }
+.monitorOverlay { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; border: 1px solid #dce8df; border-radius: 14px; background: #f8fbf7d9; text-align: center; backdrop-filter: blur(2px); }
+.monitorOverlayIcon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #e3f0e6; color: #246b55; }
+.monitorOverlay h3 { margin-top: 13px; font-size: 17px; color: #203c2b; }
+.monitorOverlay p { max-width: 360px; margin: 9px 0 17px; color: #627568; font-size: 12px; line-height: 1.7; }
 .studentCard { --status-edge: #bac5bd; display: block; width: 100%; min-width: 0; padding: 17px 17px 11px; border: 1px solid #e1e9e1; border-top: 3px solid var(--status-edge); border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .studentCard:hover { border-color: #9bbfa6; border-top-color: var(--status-edge); background: #fdfefd; }
 .studentCard:focus-visible { outline: 2px solid #246b55; outline-offset: 3px; }

@@ -44,7 +44,14 @@ export function foldWorkspace(events) {
     else if (event.type === 'identity' && payload.authorId) result.identities[`${key}:${payload.authorId}`] = payload.role;
     else if (event.type === 'message_role' && payload.messageId) result.messageRoles[`${key}:${payload.messageId}`] = payload.role;
     else if (event.type === 'collection' && key && typeof payload.paused === 'boolean') result.collectionPaused[key] = payload.paused;
-    else if (event.type === 'settings') result.settings = { ...result.settings, ...payload };
+    else if (event.type === 'settings') {
+      if (typeof payload.monitoringStartedAt === 'string' && validTime(payload.monitoringStartedAt)) {
+        // A new lesson starts with fresh baselines. Keep the old event rows for
+        // audit/export, but do not compare today's work with an earlier lesson.
+        result.snapshots = {}; result.records = {};
+      }
+      result.settings = { ...result.settings, ...payload };
+    }
   }
   return result;
 }
@@ -67,10 +74,11 @@ export function makeObservation(presentation, previous, { sessionId, continuous 
 
 export function mergeWorkspaceStudents(data, state) {
   const baseline = data.assignment.templateBaseline;
+  const newSession = Boolean(state.settings.monitoringStartedAt);
   return data.students.map((student) => {
     const key = storeStudentKey(student), snapshot = state.snapshots[key];
-    if (!snapshot) return { ...student, storeKey: key };
-    const records = [...student.records, ...(state.records[key] || [])];
+    if (!snapshot) return newSession ? { ...student, storeKey: key, records: [], chars: null, images: null, slides: null, checkedAt: null, status: 'unstarted' } : { ...student, storeKey: key };
+    const records = [...(newSession ? [] : student.records), ...(state.records[key] || [])];
     const changed = [snapshot.charDelta, snapshot.imageDelta, snapshot.slideDelta].some((value) => value != null && value !== 0);
     const surge = isTextSurge({ ...snapshot, continuous: snapshot.source === 'continuous_poll' });
     return { ...student, storeKey: key, records, checkedAt: snapshot.checkedAt,

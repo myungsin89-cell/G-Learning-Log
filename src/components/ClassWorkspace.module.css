@@ -1,6 +1,15 @@
 .plainButton { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
 .listActions { display: flex; align-items: center; gap: 15px; }
 .resumeButton { position: relative; z-index: 2; padding: 6px 9px; border: 1px solid #e8d1a4; border-radius: 7px; background: #fff6e9; color: #854e28; font: inherit; font-size: 11px; cursor: pointer; }
+.cardTop { flex-wrap: wrap; }
+.cardActions { display: flex; align-items: center; gap: 7px; }
+.editButton { position: relative; z-index: 2; padding: 6px 9px; border: 1px solid #dce6dc; border-radius: 7px; background: #fff; color: #39735a; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.editButton:hover { background: #f0f6f1; }
+.editButton:disabled { opacity: .5; cursor: wait; }
+.editNote { margin-top: 20px; color: #708074; font-size: 12px; line-height: 1.7; }
+.editError { margin-top: 15px; color: #a24630; font-size: 12px; line-height: 1.6; }
+.editBanner { position: fixed; z-index: 8; right: 22px; bottom: 22px; max-width: 420px; display: flex; align-items: center; gap: 14px; padding: 15px 18px; border: 1px solid #efcfc7; border-radius: 10px; background: #fff9f7; color: #874327; box-shadow: 0 8px 26px #20342b1a; font-size: 13px; }
+.editBanner button { border: 0; background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .brandButton { border: 0; padding: 0; background: none; font-family: inherit; cursor: pointer; }
 .headerActions { display: flex; align-items: center; gap: 20px; color: #68796e; font-size: 13px; }
 .headerActions > span { color: #718277; }

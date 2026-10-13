@@ -11,6 +11,7 @@ import { createGoogleReader } from '@/lib/googleReadOnly.mjs';
 import { createGoogleWorkspace } from '@/lib/googleWorkspace.mjs';
 import { createGoogleClassroom } from '@/lib/googleClassroom.mjs';
 import { foldWorkspace } from '@/lib/liveWorkRecords.mjs';
+import { assignmentWithSettings, assignmentDetailsPayload } from '@/lib/assignmentDetails.mjs';
 import { readOnlyClientId, saveReadOnlyClientId, signInReadOnly, signInTeacher, signInWorkspace, signInClassroom, currentWorkspaceSession, adoptWorkspaceSession, clearWorkspaceSession, clearReadOnlySession, currentReadOnlySession } from '@/lib/readOnlyAuth';
 import styles from './ExistingLogReader.module.css';
 import selectionStyles from './ClassSelection.module.css';
@@ -78,9 +79,13 @@ export default function ExistingLogReader() {
       const summaries = [];
       for (let index = 0; index < result.length; index += 4) {
         summaries.push(...await Promise.all(result.slice(index, index + 4).map(async (assignment) => {
-          let next;
-          try { next = { ...assignment, summary: await current.loadAssignmentSummary(assignment, item.name) }; }
-          catch (err) { next = { ...assignment, summaryError: err.message }; }
+          let next = assignment;
+          try {
+            const saved = await current.loadWorkspace(assignment.id);
+            next = assignmentWithSettings(assignment, saved ? foldWorkspace(saved.events).settings : {});
+          } catch (err) { next = { ...assignment, settingsError: err.message }; }
+          try { next = { ...next, summary: await current.loadAssignmentSummary(next, item.name) }; }
+          catch (err) { next = { ...next, summaryError: err.message }; }
           try {
             const cached = coverCache.current.get(assignment.id);
             const useCached = !refreshCover && cached?.expiresAt > Date.now();
@@ -102,6 +107,19 @@ export default function ExistingLogReader() {
       setSelectedAssignment(item); setData(result);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
+  }
+  async function editAssignment(item) {
+    const saved = await api().loadWorkspace(item.id);
+    return assignmentWithSettings(item, saved ? foldWorkspace(saved.events).settings : {});
+  }
+  async function saveAssignmentDetails(item, details) {
+    const payload = assignmentDetailsPayload(details.title, details.keywords);
+    const session = await authorizeSession(false);
+    const workspace = createGoogleWorkspace(session.accessToken, item, []);
+    await workspace.initialize();
+    const saved = await workspace.append([{ id: crypto.randomUUID(), type: 'settings', studentId: '', createdAt: new Date().toISOString(), payload }]);
+    const updated = assignmentWithSettings(item, foldWorkspace(saved.events).settings);
+    setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, ...updated } : assignment));
   }
   function disconnect() {
     coverCache.current.clear(); clearReadOnlySession(); setReader(null); setAccount(null); setClasses([]); setSelectedClass(null); setAssignments([]); setSelectedAssignment(null); setData(null); setError(''); setNotice(''); setRoster(null); setRosterError('');
@@ -169,7 +187,7 @@ export default function ExistingLogReader() {
     {busy && <p className={styles.floating} role="status">저장된 기록을 다시 불러오는 중입니다.</p>}
     {error && <div className={styles.floating} role="alert">{error}<button onClick={connect} disabled={busy}>다시 로그인</button><button onClick={() => setError('')}>닫기</button></div>}
     <ConnectedAssignment key={`${selectedAssignment.id}-${data.loadedAt}-${connectionRevision}`} data={data}
-      onBack={() => { setData(null); setError(''); }} onRefresh={() => { if (!busy) openAssignment(selectedAssignment); }}
+      onBack={() => { setData(null); setError(''); if (selectedClass) void openClass(selectedClass); }} onRefresh={() => { if (!busy) openAssignment(selectedAssignment); }}
       onHome={backToClasses}
       configureEntry={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? configureEntry : undefined}
       loadPresentation={(slideId) => api().loadPresentation(slideId)} loadComments={(slideId) => api().loadComments(slideId)}
@@ -205,6 +223,7 @@ export default function ExistingLogReader() {
   if (selectedClass) return <><ClassWorkspace key={selectedClass.id} classItem={selectedClass} assignments={assignments} roster={roster} rosterError={rosterError} busy={busy}
     onBack={backToClasses} onOpen={openAssignment} onRefresh={() => openClass(selectedClass, { refreshCover: true })} onRetryRoster={refreshRoster}
     onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'assignment' }) : undefined} onResume={resumeAssignment}
+    onEdit={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? editAssignment : undefined} onSaveEdit={saveAssignmentDetails}
     account={account} onLogout={disconnect} onReconnect={connect}>{messages}</ClassWorkspace>{creationDialog}</>;
 
   return <div className={selectionStyles.page}>

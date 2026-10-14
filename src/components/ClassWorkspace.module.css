@@ -14,6 +14,16 @@
 .trashConfirm { min-height: 46px; padding: 0 16px; border: 1px solid #a7493e; border-radius: 11px; background: #a7493e; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .trashConfirm:hover { background: #8b362c; }
 .trashConfirm:disabled { opacity: .6; cursor: wait; }
+.trashChoices { display: grid; gap: 9px; margin: 0 0 18px; padding: 0; border: 0; }
+.trashChoices legend { margin-bottom: 11px; color: #52685a; font-size: 12px; font-weight: 700; }
+.trashChoices label { display: flex; align-items: flex-start; gap: 11px; padding: 14px; border: 1px solid #e0e8df; border-radius: 10px; cursor: pointer; }
+.trashChoices .trashChoiceSelected { border-color: #9bbcaa; background: #f5faf5; }
+.trashChoices input { margin-top: 3px; accent-color: #246b55; }
+.trashChoices label:has(input:disabled) { opacity: .58; cursor: default; }
+.trashChoices strong, .trashChoices small { display: block; }
+.trashChoices strong { font-size: 13px; }
+.trashChoices small { margin-top: 4px; color: #708074; font-size: 11px; line-height: 1.6; }
+.trashedBadge { display: inline-block; margin-top: 9px; padding: 4px 7px; border-radius: 5px; background: #f4f1ec; color: #7e694e; font-size: 10px; font-weight: 700; }
 .editNote { margin-top: 20px; color: #708074; font-size: 12px; line-height: 1.7; }
 .editError { margin-top: 15px; color: #a24630; font-size: 12px; line-height: 1.6; }
 .editBanner { position: fixed; z-index: 8; right: 22px; bottom: 22px; max-width: 420px; display: flex; align-items: center; gap: 14px; padding: 15px 18px; border: 1px solid #efcfc7; border-radius: 10px; background: #fff9f7; color: #874327; box-shadow: 0 8px 26px #20342b1a; font-size: 13px; }

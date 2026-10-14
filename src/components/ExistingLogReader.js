@@ -129,14 +129,19 @@ export default function ExistingLogReader() {
     }
     setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, ...updated } : assignment));
   }
-  async function trashAssignment(item) {
+  async function trashAssignment(item, scope) {
     setBusy(true); setError(''); setNotice('');
     try {
       const session = await authorizeSession(true);
-      const result = await createGoogleClassroom(session.accessToken).trashAssignment({ assignmentId: item.id, className: selectedClass.name });
+      const result = await createGoogleClassroom(session.accessToken).trashAssignment({ assignmentId: item.id, className: selectedClass.name, scope });
       coverCache.current.delete(item.id);
-      setAssignments((previous) => previous.filter((assignment) => assignment.id !== item.id));
-      setNotice(`「${item.name}」 과제와 관련 파일 ${result.trashedCount}개를 Google Drive 휴지통으로 옮겼습니다.`);
+      if (result.assignmentTrashed) {
+        setAssignments((previous) => previous.filter((assignment) => assignment.id !== item.id));
+        setNotice(`「${item.name}」 과제와 관련 파일 ${result.trashedCount}개를 Google Drive 휴지통으로 옮겼습니다.`);
+      } else {
+        setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, slidesTrashed: true, summary: assignment.summary ? { ...assignment.summary, linkedCount: 0 } : assignment.summary, cover: assignment.creationId ? assignment.cover : null } : assignment));
+        setNotice(`학생 슬라이드 ${result.trashedCount}개를 휴지통으로 옮겼습니다. 과제 카드와 기록 파일은 그대로 남아 있습니다.`);
+      }
     } catch (err) { setError(`과제를 휴지통으로 옮기지 못했습니다. ${err.message}`); throw err; }
     finally { setBusy(false); }
   }

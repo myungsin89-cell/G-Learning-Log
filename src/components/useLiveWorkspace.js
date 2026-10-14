@@ -25,13 +25,13 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const [commentsErrors, setCommentsErrors] = useState({});
   const [collectionPaused, setCollectionPausedState] = useState({}), [collectionReady, setCollectionReady] = useState(false);
   const [collectionBusy, setCollectionBusy] = useState([]), [collectionErrors, setCollectionErrors] = useState({}), [collectionUnsaved, setCollectionUnsaved] = useState({});
-  const [monitoringEnded, setMonitoringEndedState] = useState(false), [monitoringBusy, setMonitoringBusy] = useState(false);
+  const [monitoringEnded, setMonitoringEndedState] = useState(Boolean(data.assignment.slidesTrashed)), [monitoringBusy, setMonitoringBusy] = useState(false);
   const [monitoringUnsaved, setMonitoringUnsaved] = useState(false), [monitoringError, setMonitoringError] = useState('');
   const refs = useRef({ api: null, events: [], collecting: false, mounted: true, sessionId: null, continuous: false, timer: null,
     live: false, skipFirstCycle: false, idleWatchEnabled: false, idleTracks: {}, watchRevision: 0, gate: new StudentCollectionGate(), connection: new WorkspaceConnection(), collectionBusy: new Set(), studentRevisions: new Map(), postedReplies: [], monitoringBusy: false });
   const actions = useRef(null);
   const state = foldWorkspace(events);
-  const monitoringPending = Boolean(process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && data.assignment.creationId && !state.settings.monitoringStartedAt && !state.settings.monitoringEnded);
+  const monitoringPending = Boolean(process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' && data.assignment.creationId && !data.assignment.slidesTrashed && !state.settings.monitoringStartedAt && !state.settings.monitoringEnded);
   const students = monitoringPending ? data.students.map((student) => ({ ...student, records: [], chars: null, images: null, slides: null, checkedAt: null, status: 'unstarted', currentCounts: null })) : mergeWorkspaceStudents(data, state);
   const hasStarted = () => !data.assignment.creationId || Boolean(foldWorkspace(refs.current.events).settings.monitoringStartedAt);
   const resetIdleWatch = useCallback(() => {
@@ -54,7 +54,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   const hydrate = (result) => {
     refs.current.events = result.events;
     const restored = foldWorkspace(result.events);
-    refs.current.gate.restore(restored.collectionPaused, restored.seen, restored.settings.monitoringEnded === true);
+    refs.current.gate.restore(restored.collectionPaused, restored.seen, data.assignment.slidesTrashed || restored.settings.monitoringEnded === true);
     if (refs.current.gate.ended()) stopLive();
     if (!refs.current.mounted) return;
     setCollectionPausedState(refs.current.gate.paused()); setCollectionReady(true);
@@ -70,7 +70,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
       const result = await loadWorkspace();
       if (cancelled || !ref.mounted || ref.api) return;
       if (result) hydrate(result);
-      else { ref.gate.restore(); setCollectionPausedState(ref.gate.paused()); setCollectionReady(true); }
+      else { ref.gate.restore({}, new Set(), Boolean(data.assignment.slidesTrashed)); setCollectionPausedState(ref.gate.paused()); setCollectionReady(true); setMonitoringEndedState(ref.gate.ended()); }
     }
     async function start() {
       setBusy(true); setProgress('모니터링 준비 중…');
@@ -145,7 +145,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   }
   async function startMonitoring() {
     const ref = refs.current;
-    if (ref.monitoringBusy || ref.collecting || ref.gate.ended() || document.visibilityState !== 'visible') return false;
+    if (data.assignment.slidesTrashed || ref.monitoringBusy || ref.collecting || ref.gate.ended() || document.visibilityState !== 'visible') return false;
     ref.monitoringBusy = true; setMonitoringBusy(true); setMonitoringError('');
     stopLive();
     try {
@@ -186,6 +186,7 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
   }
   async function setMonitoringEnded(ended) {
     const ref = refs.current;
+    if (data.assignment.slidesTrashed && !ended) return false;
     if (ref.monitoringBusy) return false;
     ref.monitoringBusy = true; setMonitoringBusy(true); setMonitoringError('');
     if (ended) {

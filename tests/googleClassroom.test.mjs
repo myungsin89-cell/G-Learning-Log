@@ -54,7 +54,7 @@ function mockGoogle() {
     }
     const driveId = path.match(/^\/drive\/v3\/files\/([^/]+)/)?.[1];
     if (driveId) {
-      const file = files.get(driveId); assert.ok(file, `Unknown file ${driveId}`);
+      const file = files.get(driveId); if (!file) return response({}, 404);
       if (path.endsWith('/permissions')) {
         if (method === 'POST') { if (state.sharingFails) return response({}, 403); file.permissions.push(body); return response({}); }
         return response({ permissions: file.permissions });
@@ -173,6 +173,48 @@ test('trashing an assignment moves every generated file and leaves the source te
   assert.equal(state.files.get('original-roster').trashed, undefined);
   assert.equal(state.calls.filter((call) => call.method === 'PATCH' && call.body.trashed).at(-1).path, `/drive/v3/files/${created.assignment.id}`);
   assert.deepEqual(await createGoogleReader('test', fetcher).listAssignments(assignmentInput.className), []);
+});
+
+test('slides-only moves student copies while preserving the assignment card and all record files', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  const result = await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'slides' });
+  assert.deepEqual(result, { trashedCount: 2, assignmentTrashed: false });
+  assert.ok(created.students.every((student) => state.files.get(student.slideId).trashed));
+  assert.equal(state.files.get(created.assignment.id).trashed, undefined);
+  assert.equal(state.files.get(created.assignment.id).appProperties.slidesTrashed, 'true');
+  assert.equal(state.files.get(created.assignment.studentEntry.id).trashed, undefined);
+  const remaining = [...state.files.values()].filter((file) => ['assignment-template-v2', 'teacher-workspace-v2'].includes(file.appProperties?.gbaeumStore));
+  assert.ok(remaining.every((file) => !file.trashed));
+  const reader = createGoogleReader('test', fetcher);
+  const [assignment] = await reader.listAssignments(assignmentInput.className);
+  assert.equal(assignment.slidesTrashed, true);
+  assert.equal((await reader.loadAssignmentSummary(assignment, assignmentInput.className)).linkedCount, 0);
+  assert.equal((await reader.loadAssignment(assignment, assignmentInput.className)).students.length, 2);
+  const later = await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'all' });
+  assert.deepEqual(later, { trashedCount: 4, assignmentTrashed: true });
+  assert.deepEqual(await reader.listAssignments(assignmentInput.className), []);
+});
+
+test('a failed slides-only move leaves records and card unmarked for retry', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  state.failTrashId = created.students[1].slideId;
+  await assert.rejects(api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'slides' }));
+  assert.equal(state.files.get(created.assignment.id).appProperties.slidesTrashed, undefined);
+  assert.equal(state.files.get(created.assignment.id).trashed, undefined);
+  await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'slides' });
+  assert.equal(state.files.get(created.assignment.id).appProperties.slidesTrashed, 'true');
+});
+
+test('records can be moved later after trashed student slides are permanently gone', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'slides' });
+  for (const student of created.students) state.files.delete(student.slideId);
+  const result = await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className, scope: 'all' });
+  assert.equal(result.assignmentTrashed, true);
+  assert.equal(state.files.get(created.assignment.id).trashed, true);
 });
 
 test('a failed related-file move leaves the assignment visible and can be retried', async () => {

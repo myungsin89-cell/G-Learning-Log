@@ -71,7 +71,7 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       // Filter exact class prefixes locally; a class name never becomes Drive query syntax.
       const files = await listFiles("name contains 'SlideSight_DB_' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
       const prefix = `SlideSight_DB_[${className}]_[`;
-      return files.filter((file) => file.name.startsWith(prefix) && file.name.endsWith(']')).map((file) => ({ id: file.id, name: file.name.slice(prefix.length, -1), createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }));
+      return files.filter((file) => file.name.startsWith(prefix) && file.name.endsWith(']')).map((file) => ({ id: file.id, name: file.name.slice(prefix.length, -1), createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }));
     },
     async loadCreationPlan(assignment) {
       if (!assignment.creationId) throw new Error('이 과제의 배부 정보를 찾을 수 없습니다.');
@@ -92,9 +92,10 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       const result = await get('sheets', `spreadsheets/${encodeURIComponent(assignment.id)}/values/${encodeURIComponent("'students'!A:O")}`);
       if (!['name', 'student_name'].includes(result.values?.[0]?.[1])) throw new Error('학생 목록을 확인할 수 없습니다.');
       const data = adaptStoredAssignment({ className, assignment, studentRows: result.values, logRows: [], loadedAt: new Date().toISOString() });
-      return { studentCount: data.students.length, linkedCount: data.students.filter((student) => student.slideId).length, coverSlideId: data.students.find((student) => student.slideId)?.slideId || null };
+      return { studentCount: data.students.length, linkedCount: assignment.slidesTrashed ? 0 : data.students.filter((student) => student.slideId).length, coverSlideId: assignment.slidesTrashed ? null : data.students.find((student) => student.slideId)?.slideId || null };
     },
     async loadAssignmentCover(assignment) {
+      if (assignment.slidesTrashed && !assignment.creationId) return null;
       let slideId = parsePresentationId(assignment.coverSlideId), source = 'template';
       if (!slideId && assignment.creationId) {
         const creationId = `${assignment.creationId}:template`.replaceAll('\\', '\\\\').replaceAll("'", "\\'");

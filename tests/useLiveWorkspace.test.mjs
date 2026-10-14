@@ -26,9 +26,9 @@ after(() => {
 });
 
 const control = (id, type, payload, studentId = '') => ({ id, type, studentId, payload, createdAt: '2026-10-12T00:00:00Z' });
-function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoStudents = false, newAssignment = false } = {}) {
+function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoStudents = false, newAssignment = false, slidesTrashed = false } = {}) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.parse('2026-10-12T01:00:00Z') });
-  const data = { assignment: { id: 'test-assignment', ...(newAssignment ? { creationId: 'new-assignment-job' } : {}), templateBaseline: { chars: 120, images: 1 } }, keywords: [], students: [
+  const data = { assignment: { id: 'test-assignment', ...(newAssignment ? { creationId: 'new-assignment-job' } : {}), slidesTrashed, templateBaseline: { chars: 120, images: 1 } }, keywords: [], students: [
     { id: 'a', slideId: 'a', number: 1, name: '테스트A', records: [], chars: 0, images: 0, slides: 1 },
     ...(twoStudents ? [{ id: 'b', slideId: 'b', number: 4, name: '테스트B', records: [], chars: 0, images: 0, slides: 1 }] : []),
   ] };
@@ -75,6 +75,22 @@ test('opening a new assignment initializes once, checks immediately and records 
   assert.equal(f.current().students[0].records.at(-1).source, 'continuous_poll');
   assert.equal(f.audit.authorization.length, 1);
   await f.unmount(); await f.tick(120000); assert.equal(f.audit.reads.length, 2);
+});
+
+test('a kept assignment with trashed slides shows saved records without reading or restarting slides', async (t) => {
+  const f = fixture(t, { newAssignment: true, slidesTrashed: true, events: [control('old-note', 'memo', { text: '저장된 기록' }, 'slide:a')] });
+  await f.mount();
+  assert.equal(f.current().monitoringPending, false);
+  assert.equal(f.current().monitoringEnded, true);
+  assert.equal(f.current().running, false);
+  assert.deepEqual(f.audit.reads, []);
+  await act(async () => {
+    assert.equal(await f.current().startMonitoring(), false);
+    assert.equal(await f.current().setMonitoringEnded(false), false);
+    await assert.rejects(f.current().inspectPresentation(f.current().students[0]), /모니터링을 종료/);
+  });
+  await f.tick(120000);
+  assert.deepEqual(f.audit.reads, []);
 });
 
 test('created assignment waits for a teacher start, saves current baselines, then records only later changes', async (t) => {

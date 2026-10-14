@@ -53,10 +53,37 @@ function AssignmentCover({ assignment }) {
   return <div className={real.assignmentCover}><div className={real.coverFallback}><Image src="/google-slides.svg" width={32} height={40} alt="" /><span>{loading ? '첫 장 불러오는 중…' : assignment.coverError || failedUrl ? '첫 장을 불러오지 못했어요' : '연결된 슬라이드가 없어요'}</span></div></div>;
 }
 
-export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onResume, onEdit, onSaveEdit, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
+function AssignmentTrashDialog({ assignment, onDelete, onClose }) {
+  const dialog = useRef(null);
+  const titleId = useId();
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { const element = dialog.current; element.showModal(); return () => { if (element.open) element.close(); }; }, []);
+  const close = () => { if (!deleting) onClose(); };
+  async function confirm() {
+    if (deleting) return;
+    setDeleting(true); setError('');
+    try { await onDelete(assignment); onClose(); }
+    catch (err) { setError(err.message); }
+    finally { setDeleting(false); }
+  }
+  return <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <div className={styles.dialogHeader}><h2 id={titleId}>수업 과제를 휴지통으로 옮길까요?</h2><button className={styles.iconButton} onClick={close} disabled={deleting} aria-label="닫기"><Icon name="close" /></button></div>
+    <div className={styles.dialogBody}>
+      <p className={real.trashTitle}>{assignment.name}</p>
+      <p className={styles.dialogDescription}>과제 시트와 {assignment.creationId ? '이 과제에서 만든' : '학생 목록에 연결된'} 학생별 슬라이드를 Google Drive 휴지통으로 옮깁니다. 함께 생성된 학생 접속 시트, 교사 기록{assignment.creationId ? ', 배부 원본' : ''}도 같이 옮깁니다. 학생 접속 링크도 사용할 수 없게 됩니다.</p>
+      <p className={real.trashNote}>처음 선택한 예시 슬라이드와 학급 명단은 유지됩니다. Google Drive 휴지통에서 각 파일을 복원할 수 있습니다.</p>
+      {error && <p className={real.editError} role="alert">{error}</p>}
+    </div>
+    <div className={styles.dialogActions}><button className={styles.secondaryButton} onClick={close} disabled={deleting}>취소</button><button className={real.trashConfirm} onClick={confirm} disabled={deleting}>{deleting ? '휴지통으로 옮기는 중…' : '과제와 생성 파일 휴지통으로 이동'}</button></div>
+  </dialog>;
+}
+
+export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onResume, onEdit, onSaveEdit, onDelete, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
   const [search, setSearch] = useState('');
   const [showRoster, setShowRoster] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [editError, setEditError] = useState('');
   async function editAssignment(assignment) {
     setEditError('');
@@ -81,7 +108,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
         <div className={styles.toolbar}><div className={real.listActions}><span className={real.listCount}>전체 과제 {assignments.length}개</span><button className={styles.textButton} onClick={onRefresh} disabled={busy}>새로고침</button></div><label className={styles.search}><Icon name="search" size={17} /><input aria-label="과제 검색" placeholder="과제 검색" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
         <div className={styles.grid}>
           {visible.map((assignment) => <article key={assignment.id} className={styles.card}>
-            <div className={`${styles.cardTop} ${real.cardTop}`}><span className={styles.tool}><Image src="/google-slides.svg" width={17} height={21} alt="" /> Google Slides</span><div className={real.cardActions}>{assignment.setupStatus && assignment.setupStatus !== 'ready' && <button className={real.resumeButton} onClick={() => onResume?.(assignment)} disabled={busy}>배부 이어하기</button>}{onEdit && <button className={real.editButton} onClick={() => editAssignment(assignment)} disabled={busy} aria-label={`${assignment.name} 수정`}>수정</button>}</div></div>
+            <div className={`${styles.cardTop} ${real.cardTop}`}><span className={styles.tool}><Image src="/google-slides.svg" width={17} height={21} alt="" /> Google Slides</span><div className={real.cardActions}>{assignment.setupStatus && assignment.setupStatus !== 'ready' && <button className={real.resumeButton} onClick={() => onResume?.(assignment)} disabled={busy}>배부 이어하기</button>}{onEdit && <button className={real.editButton} onClick={() => editAssignment(assignment)} disabled={busy} aria-label={`${assignment.name} 수정`}>수정</button>}{onDelete && <button className={real.trashButton} onClick={() => setDeleting(assignment)} disabled={busy} aria-label={`${assignment.name} 휴지통으로 이동`}>삭제</button>}</div></div>
             <AssignmentCover assignment={assignment} />
             <div className={styles.cardBody}>
               {assignment.createdAt && <p className={styles.cardDate}>{new Date(assignment.createdAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })} 생성</p>}
@@ -101,5 +128,6 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
     {showRoster && <RosterDialog className={classItem.name} roster={roster} error={rosterError} busy={busy} onRetry={onRetryRoster} onClose={() => setShowRoster(false)} />}
     {editError && <div className={real.editBanner} role="alert">{editError}<button onClick={() => setEditError('')}>닫기</button></div>}
     {editing && <AssignmentEditDialog key={editing.id} assignment={editing} existingNames={assignments.filter((item) => item.id !== editing.id).map((item) => item.name)} onSave={onSaveEdit} onClose={() => setEditing(null)} />}
+    {deleting && <AssignmentTrashDialog key={deleting.id} assignment={deleting} onDelete={onDelete} onClose={() => setDeleting(null)} />}
   </div>;
 }

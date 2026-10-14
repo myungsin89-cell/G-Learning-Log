@@ -28,7 +28,7 @@ test('explicit keyword items remain intact through creation, reload, and resume'
 
 function mockGoogle() {
   const files = new Map([['original-roster', { id: 'original-roster', name: 'G배움로그_학급명단_저장소', mimeType: mime, ownedByMe: true, permissions: [{ type: 'user', role: 'owner' }], appProperties: {}, tabs: { '기존 반': [['number', 'name'], [9, '원래 학생']] } }], ['template', { id: 'template', mimeType: 'application/vnd.google-apps.presentation', capabilities: { canCopy: true }, deck }]]);
-  const state = { files, calls: [], sequence: 0, lostCopy: false, failStudent: null, sharingFails: false };
+  const state = { files, calls: [], sequence: 0, lostCopy: false, failStudent: null, failTrashId: null, sharingFails: false };
   const fetcher = async (address, options) => {
     const url = new URL(address), path = decodeURIComponent(url.pathname), method = options.method;
     const body = options.body ? JSON.parse(options.body) : null;
@@ -38,7 +38,10 @@ function mockGoogle() {
     if (path === '/drive/v3/files' && method === 'GET') {
       const q = url.searchParams.get('q');
       const job = q.match(/key='gbaeumCreation' and value='([^']+)'/)?.[1];
-      const found = [...files.values()].filter((file) => job ? file.appProperties?.gbaeumCreation === job : q.includes('teacher-workspace-v2') ? file.appProperties?.gbaeumStore === 'teacher-workspace-v2' : q.includes('학급명단') ? file.name === 'G배움로그_학급명단_저장소' : file.name?.startsWith('SlideSight_DB_'));
+      const kind = q.match(/key='gbaeumStore' and value='([^']+)'/)?.[1];
+      const source = q.match(/key='sourceSheet' and value='([^']+)'/)?.[1];
+      const found = [...files.values()].filter((file) => (!q.includes('trashed = false') || !file.trashed) &&
+        (job ? file.appProperties?.gbaeumCreation === job : kind ? file.appProperties?.gbaeumStore === kind && (!source || file.appProperties?.sourceSheet === source) : q.includes('학급명단') ? file.name === 'G배움로그_학급명단_저장소' : file.name?.startsWith('SlideSight_DB_')));
       return response({ files: found });
     }
     if ((path === '/drive/v3/files' || path.endsWith('/copy')) && method === 'POST') {
@@ -56,7 +59,12 @@ function mockGoogle() {
         if (method === 'POST') { if (state.sharingFails) return response({}, 403); file.permissions.push(body); return response({}); }
         return response({ permissions: file.permissions });
       }
-      if (method === 'PATCH') { Object.assign(file.appProperties, body.appProperties); return response(file); }
+      if (method === 'PATCH') {
+        if (body.trashed && state.failTrashId === driveId) { state.failTrashId = null; return response({}, 500); }
+        if (body.appProperties) Object.assign(file.appProperties, body.appProperties);
+        if (body.trashed !== undefined) file.trashed = body.trashed;
+        return response(file);
+      }
       return response(file);
     }
     const slideId = path.match(/^\/v1\/presentations\/([^/]+)$/)?.[1];
@@ -153,6 +161,71 @@ test('partial distribution resumes from a saved plan without duplicating success
   assert.deepEqual(plan.roster, roster);
   const created = await createGoogleClassroom('test', fetcher).createAssignment(plan);
   assert.equal(created.students.length, 2); assert.equal(state.sequence, 6);
+});
+
+test('trashing an assignment moves every generated file and leaves the source template and class roster intact', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  const result = await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className });
+  assert.equal(result.trashedCount, 6);
+  assert.equal([...state.files.values()].filter((file) => file.appProperties?.gbaeumStore === 'classroom-assignment-v2' || file.appProperties?.gbaeumStore === 'student-copy-v2' || file.appProperties?.gbaeumStore === 'assignment-template-v2' || file.appProperties?.gbaeumStore === 'teacher-workspace-v2' || file.appProperties?.gbaeumStore === 'student-join-v2').every((file) => file.trashed), true);
+  assert.equal(state.files.get('template').trashed, undefined);
+  assert.equal(state.files.get('original-roster').trashed, undefined);
+  assert.equal(state.calls.filter((call) => call.method === 'PATCH' && call.body.trashed).at(-1).path, `/drive/v3/files/${created.assignment.id}`);
+  assert.deepEqual(await createGoogleReader('test', fetcher).listAssignments(assignmentInput.className), []);
+});
+
+test('a failed related-file move leaves the assignment visible and can be retried', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  state.failTrashId = created.students[1].slideId;
+  await assert.rejects(api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className }));
+  assert.equal(state.files.get(created.assignment.id).trashed, undefined);
+  assert.equal((await createGoogleReader('test', fetcher).listAssignments(assignmentInput.className)).length, 1);
+  await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className });
+  assert.equal(state.files.get(created.assignment.id).trashed, true);
+  assert.equal(state.files.get(created.students[1].slideId).trashed, true);
+});
+
+test('a student copy created before its row was saved is also moved to the trash', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  const orphan = structuredClone(state.files.get(created.students[0].slideId));
+  orphan.id = 'unfinished-copy';
+  orphan.appProperties.gbaeumCreation = `${assignmentInput.jobId}:99`;
+  state.files.set(orphan.id, orphan);
+  const result = await api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className });
+  assert.equal(result.trashedCount, 7);
+  assert.equal(state.files.get(orphan.id).trashed, true);
+});
+
+test('an unrelated slide in assignment rows blocks the move before changing files', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const created = await api.createAssignment(assignmentInput);
+  state.files.get(created.assignment.id).tabs.students[1][2] = 'template';
+  const before = state.calls.length;
+  await assert.rejects(api.trashAssignment({ assignmentId: created.assignment.id, className: assignmentInput.className }), /연결된 파일/);
+  assert.equal(state.calls.slice(before).some((call) => call.method === 'PATCH'), false);
+  assert.equal(state.files.get('template').trashed, undefined);
+});
+
+test('an older assignment moves only its verified student copies and source sheet', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  state.files.set('old-sheet', { id: 'old-sheet', name: 'SlideSight_DB_[4학년 4반]_[옛 과제]', mimeType: mime, ownedByMe: true, appProperties: {}, tabs: { students: [['student_number', 'student_name', 'slide_id'], [1, '김누리', 'old-slide']] } });
+  state.files.set('old-slide', { id: 'old-slide', name: '[1번 김누리] SlideSight 과제', mimeType: 'application/vnd.google-apps.presentation', ownedByMe: true, appProperties: {} });
+  const result = await api.trashAssignment({ assignmentId: 'old-sheet', className: '4학년 4반' });
+  assert.equal(result.trashedCount, 2);
+  assert.equal(state.files.get('old-sheet').trashed, true);
+  assert.equal(state.files.get('old-slide').trashed, true);
+  assert.equal(state.files.get('template').trashed, undefined);
+});
+
+test('an older assignment with a renamed or unrelated linked slide stays untouched', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  state.files.set('old-sheet', { id: 'old-sheet', name: 'SlideSight_DB_[4학년 4반]_[옛 과제]', mimeType: mime, ownedByMe: true, appProperties: {}, tabs: { students: [['student_number', 'student_name', 'slide_id'], [1, '김누리', 'template']] } });
+  const before = state.calls.length;
+  await assert.rejects(api.trashAssignment({ assignmentId: 'old-sheet', className: '4학년 4반' }), /연결된 파일/);
+  assert.equal(state.calls.slice(before).some((call) => call.method === 'PATCH'), false);
 });
 
 test('creation progress counts students only after their slide link is saved and finishes after final setup', async () => {

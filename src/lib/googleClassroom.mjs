@@ -57,6 +57,16 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
   }
   const read = async (id, address) => (await request('sheets', `spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(address)}`)).values || [];
   const write = (id, address, values) => request('sheets', `spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(address)}`, { method: 'PUT', params: [['valueInputOption', 'RAW']], body: { values } });
+  async function listFiles(query) {
+    const files = [];
+    let pageToken;
+    do {
+      const result = await request('drive', 'files', { params: [['q', query], ['fields', 'nextPageToken,files(id,mimeType,ownedByMe,trashed,appProperties)'], ['pageSize', '100'], ['pageToken', pageToken]] });
+      files.push(...(result.files || []));
+      pageToken = result.nextPageToken;
+    } while (pageToken);
+    return files;
+  }
   async function plan(file, jobId, kind, value, titles) {
     await assertJob(file.id, jobId, kind); await tabs(file.id, [...titles, '_setup']);
     const saved = await read(file.id, "'_setup'!A1:B2");
@@ -89,6 +99,54 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
   }
   return {
     createStudentEntry: studentEntry,
+    async trashAssignment({ assignmentId, className }) {
+      if (!assignmentId || !className) throw new Error('휴지통으로 옮길 수업 과제를 확인해 주세요.');
+      const assignment = await request('drive', `files/${encodeURIComponent(assignmentId)}`, { params: [['fields', 'id,name,mimeType,ownedByMe,trashed,appProperties']] });
+      const creationId = assignment.appProperties?.gbaeumCreation;
+      const managed = assignment.appProperties?.gbaeumStore === 'classroom-assignment-v2';
+      if (assignment.trashed || !assignment.ownedByMe || assignment.mimeType !== 'application/vnd.google-apps.spreadsheet' ||
+          (managed ? !creationId : Boolean(assignment.appProperties?.gbaeumStore || creationId)) ||
+          !assignment.name.startsWith(`SlideSight_DB_[${classroomName(className)}]_[`) || !assignment.name.endsWith(']')) {
+        throw new Error('앱에서 만든 이 학급의 과제인지 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
+      }
+      const kinds = ['student-copy-v2', 'assignment-template-v2', 'student-join-v2'];
+      const groups = await Promise.all(kinds.map((kind, index) => managed || index === 2 ? listFiles(`trashed = false and appProperties has { key='gbaeumStore' and value='${kind}' }`) : []));
+      const workspaces = await listFiles(`trashed = false and appProperties has { key='gbaeumStore' and value='teacher-workspace-v2' } and appProperties has { key='sourceSheet' and value='${quote(assignmentId)}' }`);
+      const candidates = new Map();
+      for (const [index, files] of groups.entries()) for (const file of files) {
+        const job = file.appProperties?.gbaeumCreation;
+        if ((index === 0 && job?.startsWith(`${creationId}:`) && job !== `${creationId}:template`) ||
+            (index === 1 && job === `${creationId}:template`) ||
+            (index === 2 && job === `join:${assignmentId}`)) candidates.set(file.id, { kind: kinds[index], job });
+      }
+      for (const file of workspaces) if (file.appProperties?.sourceSheet === assignmentId) candidates.set(file.id, { kind: 'teacher-workspace-v2' });
+      const rows = await read(assignmentId, "'students'!A:P");
+      if (rows[0]?.[0] !== 'student_number' || rows[0]?.[1] !== 'student_name' || rows[0]?.[2] !== 'slide_id') throw new Error('과제의 학생 목록 형식을 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
+      for (const row of rows.slice(1)) if (row[2] && !candidates.has(row[2])) candidates.set(row[2], managed ? { kind: 'student-copy-v2' } : { kind: 'legacy-student-copy', name: `[${row[0] ? `${row[0]}번 ` : ''}${row[1]}] SlideSight 과제` });
+      for (const [id, kind, job] of [[assignment.appProperties?.coverSlide, 'assignment-template-v2', `${creationId}:template`], [assignment.appProperties?.joinSheet, 'student-join-v2', `join:${assignmentId}`]]) {
+        if (id && !candidates.has(id)) candidates.set(id, { kind, job });
+      }
+      // Check every file before changing any. The source template and class roster have no matching markers.
+      const files = [];
+      for (const [id, expected] of candidates) {
+        if (id === assignmentId) throw new Error('과제 파일 연결이 잘못되어 휴지통으로 옮기지 않았습니다.');
+        const file = await request('drive', `files/${encodeURIComponent(id)}`, { params: [['fields', 'id,name,mimeType,ownedByMe,trashed,appProperties']] });
+        const props = file.appProperties || {};
+        const valid = file.id === id && file.ownedByMe && (expected.kind === 'legacy-student-copy' ?
+          file.mimeType === 'application/vnd.google-apps.presentation' && file.name === expected.name && !props.gbaeumStore :
+          props.gbaeumStore === expected.kind && (
+          expected.kind === 'teacher-workspace-v2' ? props.sourceSheet === assignmentId :
+          expected.kind === 'student-copy-v2' ? props.gbaeumCreation?.startsWith(`${creationId}:`) && props.gbaeumCreation !== `${creationId}:template` :
+          props.gbaeumCreation === expected.job
+        ));
+        if (!valid) throw new Error('연결된 파일 중 이 과제에서 만든 것으로 확인되지 않는 파일이 있어 휴지통으로 옮기지 않았습니다.');
+        if (!file.trashed) files.push(id);
+      }
+      for (const id of files) await request('drive', `files/${encodeURIComponent(id)}`, { method: 'PATCH', body: { trashed: true } });
+      // Keep the assignment visible for retry if any related file failed.
+      await request('drive', `files/${encodeURIComponent(assignmentId)}`, { method: 'PATCH', body: { trashed: true } });
+      return { trashedCount: files.length + 1 };
+    },
     async updateStudentEntryTitle({ assignmentId, entryId, className: inputClass, title: inputTitle, allowMissing = false }) {
       if (!assignmentId) throw new Error('학생 접속 링크를 찾을 수 없습니다.');
       entryId ||= (await find(`join:${assignmentId}`))?.id;

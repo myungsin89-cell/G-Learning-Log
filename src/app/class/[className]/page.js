@@ -196,10 +196,10 @@ export default function ClassWorkspace() {
     if (!assignmentToDelete) return;
     setIsDeletingAssignment(true);
     try {
-      await deleteAssignment(assignmentToDelete.id);
+      await deleteAssignment(assignmentToDelete.id, className);
       setAssignmentToDelete(null);
       await loadClassData();
-      showAlert('과제가 성공적으로 삭제되었습니다.', '삭제 완료', 'success');
+      showAlert('과제와 관련 파일을 Google Drive 휴지통으로 옮겼습니다.', '이동 완료', 'success');
     } catch (err) {
       console.error('Failed to delete assignment:', err);
       showAlert('과제 삭제에 실패했습니다: ' + getErrorMessage(err), '오류', 'error');
@@ -1212,7 +1212,7 @@ export default function ClassWorkspace() {
             </h3>
             <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: '1.6', margin: '0 0 1.5rem 0' }}>
               <strong>[{assignmentToDelete.name}]</strong> 과제가 삭제되며,<br />
-              학생들에게 배부된 구글 슬라이드도 함께 삭제됩니다.
+              학생들에게 배부된 구글 슬라이드와 관련 파일을 Google Drive 휴지통으로 옮깁니다.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button 

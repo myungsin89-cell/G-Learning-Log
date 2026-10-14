@@ -129,6 +129,17 @@ export default function ExistingLogReader() {
     }
     setAssignments((previous) => previous.map((assignment) => assignment.id === item.id ? { ...assignment, ...updated } : assignment));
   }
+  async function trashAssignment(item) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const session = await authorizeSession(true);
+      const result = await createGoogleClassroom(session.accessToken).trashAssignment({ assignmentId: item.id, className: selectedClass.name });
+      coverCache.current.delete(item.id);
+      setAssignments((previous) => previous.filter((assignment) => assignment.id !== item.id));
+      setNotice(`「${item.name}」 과제와 관련 파일 ${result.trashedCount}개를 Google Drive 휴지통으로 옮겼습니다.`);
+    } catch (err) { setError(`과제를 휴지통으로 옮기지 못했습니다. ${err.message}`); throw err; }
+    finally { setBusy(false); }
+  }
   function disconnect() {
     coverCache.current.clear(); clearReadOnlySession(); setReader(null); setAccount(null); setClasses([]); setSelectedClass(null); setAssignments([]); setSelectedAssignment(null); setData(null); setError(''); setNotice(''); setRoster(null); setRosterError('');
   }
@@ -232,6 +243,7 @@ export default function ExistingLogReader() {
     onBack={backToClasses} onOpen={openAssignment} onRefresh={() => openClass(selectedClass, { refreshCover: true })} onRetryRoster={refreshRoster}
     onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'assignment' }) : undefined} onResume={resumeAssignment}
     onEdit={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? editAssignment : undefined} onSaveEdit={saveAssignmentDetails}
+    onDelete={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? trashAssignment : undefined}
     account={account} onLogout={disconnect} onReconnect={connect}>{messages}</ClassWorkspace>{creationDialog}</>;
 
   return <div className={selectionStyles.page}>

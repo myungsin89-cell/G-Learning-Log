@@ -12,7 +12,8 @@ import { createGoogleWorkspace } from '@/lib/googleWorkspace.mjs';
 import { createGoogleClassroom } from '@/lib/googleClassroom.mjs';
 import { foldWorkspace } from '@/lib/liveWorkRecords.mjs';
 import { assignmentWithSettings, assignmentDetailsPayload } from '@/lib/assignmentDetails.mjs';
-import { readOnlyClientId, saveReadOnlyClientId, signInReadOnly, signInTeacher, signInWorkspace, signInClassroom, currentWorkspaceSession, adoptWorkspaceSession, clearWorkspaceSession, clearReadOnlySession, currentReadOnlySession } from '@/lib/readOnlyAuth';
+import { readOnlyClientId, saveReadOnlyClientId, signInReadOnly, signInTeacher, signInWorkspace, currentWorkspaceSession, adoptWorkspaceSession, clearWorkspaceSession, clearReadOnlySession, currentReadOnlySession } from '@/lib/readOnlyAuth';
+import { pickGoogleDriveFiles } from '@/lib/googlePicker';
 import styles from './ExistingLogReader.module.css';
 import selectionStyles from './ClassSelection.module.css';
 
@@ -166,12 +167,12 @@ export default function ExistingLogReader() {
     const session = await authorizeSession(false, options);
     return createGoogleWorkspace(session.accessToken, data.assignment, data.students);
   }
-  async function authorizeSession(copyTemplate, { interactive = true } = {}) {
+  async function authorizeSession(_copyTemplate, { interactive = true } = {}) {
     if (!account?.permissionId) throw new Error('계정 확인을 위해 과제 목록에서 다시 로그인해 주세요.');
     // Called directly by the user's button so GIS can open its permission popup.
     const cached = currentWorkspaceSession();
-    if ((!cached || (copyTemplate && !cached.scopes.includes('https://www.googleapis.com/auth/drive'))) && !interactive) throw new Error('Google 연결이 만료됐습니다. Google 다시 연결을 눌러 주세요.');
-    const session = cached && (!copyTemplate || cached.scopes.includes('https://www.googleapis.com/auth/drive')) ? cached : await (copyTemplate ? signInClassroom() : signInWorkspace());
+    if (!cached && !interactive) throw new Error('Google 연결이 만료됐습니다. Google 다시 연결을 눌러 주세요.');
+    const session = cached || await signInWorkspace();
     const nextReader = createGoogleReader(session.accessToken);
     const nextAccount = await nextReader.account();
     if (nextAccount?.permissionId !== account.permissionId) { clearWorkspaceSession(); throw new Error('자료를 불러온 교사와 같은 Google 계정으로 저장을 연결해 주세요.'); }
@@ -185,6 +186,35 @@ export default function ExistingLogReader() {
   async function createAssignment(payload) {
     const session = await authorizeSession(true);
     return createGoogleClassroom(session.accessToken).createAssignment(payload);
+  }
+  async function pickFiles(options) {
+    const session = await authorizeSession(false);
+    return pickGoogleDriveFiles({ accessToken: session.accessToken, ...options });
+  }
+  async function pickTemplate() {
+    const files = await pickFiles({ kind: 'presentation', title: '학생에게 배부할 예시 슬라이드 선택' });
+    return files[0] || null;
+  }
+  async function importClasses() {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const files = await pickFiles({ kind: 'spreadsheet', multiple: true, title: '기존 G배움로그 학급 명단 선택' });
+      if (!files.length) return;
+      const found = await api().listClasses();
+      setClasses(found);
+      setNotice(found.length ? `선택한 파일의 접근을 연결했습니다. 학급 ${found.length}개를 확인했어요.` : '파일 접근은 연결했지만 G배움로그 학급 명단을 찾지 못했습니다. 학급 명단 저장소를 선택해 주세요.');
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+  async function importAssignments() {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const files = await pickFiles({ kind: 'spreadsheet', multiple: true, title: `${selectedClass.name} 기존 과제 시트 선택` });
+      if (!files.length) return;
+      await openClass(selectedClass, { refreshCover: true });
+      setNotice('선택한 과제 파일의 접근을 연결했습니다.');
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   }
   async function resumeAssignment(assignment) {
     setBusy(true); setError('');
@@ -225,7 +255,7 @@ export default function ExistingLogReader() {
   </>;
   const creationDialog = creation && <ClassroomCreation key={creation.initialPlan?.jobId || creation.kind} kind={creation.kind} className={selectedClass?.name} roster={roster || []} initialPlan={creation.initialPlan}
     existingNames={(creation.kind === 'class' ? classes : assignments).map((item) => item.name)}
-    onCreate={creation.kind === 'class' ? createClass : createAssignment} onCreated={created} onClose={() => { setCreation(null); if (selectedClass) openClass(selectedClass); else refreshClasses(); }} />;
+    onCreate={creation.kind === 'class' ? createClass : createAssignment} onPickTemplate={creation.kind === 'class' ? undefined : pickTemplate} onCreated={created} onClose={() => { setCreation(null); if (selectedClass) openClass(selectedClass); else refreshClasses(); }} />;
   if (!reader) return <EntryScreen onLogin={connect} loading={busy}>
       {messages}
       <details className={styles.settings} open={showConfig} onToggle={(event) => setShowConfig(event.currentTarget.open)}>
@@ -246,7 +276,7 @@ export default function ExistingLogReader() {
 
   if (selectedClass) return <><ClassWorkspace key={selectedClass.id} classItem={selectedClass} assignments={assignments} roster={roster} rosterError={rosterError} busy={busy}
     onBack={backToClasses} onOpen={openAssignment} onRefresh={() => openClass(selectedClass, { refreshCover: true })} onRetryRoster={refreshRoster}
-    onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'assignment' }) : undefined} onResume={resumeAssignment}
+    onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'assignment' }) : undefined} onImport={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? importAssignments : undefined} onResume={resumeAssignment}
     onEdit={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? editAssignment : undefined} onSaveEdit={saveAssignmentDetails}
     onDelete={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? trashAssignment : undefined}
     account={account} onLogout={disconnect} onReconnect={connect}>{messages}</ClassWorkspace>{creationDialog}</>;
@@ -255,7 +285,7 @@ export default function ExistingLogReader() {
     <ClassSelectionHeader displayName={account?.displayName} onLogout={disconnect} onReconnect={connect} loading={busy} />
     <main className={selectionStyles.main}>
       {messages}
-      <ClassSelection classItems={classes} onSelect={openClass} disabled={busy} onRefresh={refreshClasses} onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'class' }) : undefined} />
+      <ClassSelection classItems={classes} onSelect={openClass} disabled={busy} onRefresh={refreshClasses} onImport={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? importClasses : undefined} onCreate={process.env.NEXT_PUBLIC_APP_MODE !== 'readonly' ? () => setCreation({ kind: 'class' }) : undefined} />
       <MadeByStamp />
     </main>
     {creationDialog}

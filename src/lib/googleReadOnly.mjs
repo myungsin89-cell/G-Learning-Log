@@ -4,8 +4,7 @@ import { parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 
 // This module deliberately has no dependency on the legacy writer or gapi token.
 export const READ_ONLY_SCOPES = [
-  'https://www.googleapis.com/auth/drive.readonly',
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/drive.file',
 ];
 
 export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {

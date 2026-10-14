@@ -35,6 +35,7 @@ test('first teacher login grants every current feature scope and reuses the same
     assert.equal(await signInWorkspace(), login); assert.equal(await signInClassroom(), login);
   }
   assert.equal(calls.length, 1); assert.deepEqual(writes, []);
+  assert.deepEqual(TEACHER_SCOPES, ['https://www.googleapis.com/auth/drive.file']);
 });
 
 test('expired connection obtains a new token without forcing account selection or reusing the expired token', async () => {
@@ -48,7 +49,7 @@ test('expired connection obtains a new token without forcing account selection o
 
 test('a partial grant never enables classroom creation or monitoring', async () => {
   const { calls } = setup({ partial: true });
-  await assert.rejects(signInTeacher(), /권한을 모두 허용/);
+  await assert.rejects(signInTeacher(), /선택한 Google 파일과 앱이 만든 자료/);
   assert.equal(calls.length, 1); assert.equal(currentWorkspaceSession(), null); assert.equal(currentReadOnlySession(), null);
 });
 
@@ -68,9 +69,9 @@ test('explicit account selection replaces both sessions, and a changed client ca
   await signInClassroom(); assert.equal(calls.length, 3); assert.equal(calls[2].config.client_id, 'other.apps.googleusercontent.com');
 });
 
-test('the separate read-only flow requests no write access and does not retain an earlier write session', async () => {
+test('the separate read-only deployment still limits access to app-authorized files and drops the earlier session', async () => {
   const { calls } = setup(); await signInTeacher();
   const read = await signInReadOnly();
-  assert.equal(read.scopes.length, 2); assert.ok(read.scopes.every((scope) => scope.endsWith('.readonly')));
+  assert.deepEqual(read.scopes, ['https://www.googleapis.com/auth/drive.file']);
   assert.equal(currentWorkspaceSession(), null); assert.equal(currentReadOnlySession(), read); assert.equal(calls.length, 2);
 });

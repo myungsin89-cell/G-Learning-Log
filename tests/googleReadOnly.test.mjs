@@ -164,7 +164,7 @@ test('class, assignment, records and comment reads use only GET, including pagin
   assert.equal((await api.loadComments('original-slide')).length, 1);
   assert.ok(calls.every(({ options }) => options.method === 'GET'));
   assert.ok(calls.every(({ url }) => !url.pathname.includes('batchUpdate')));
-  assert.ok(READ_ONLY_SCOPES.every((scope) => scope.endsWith('.readonly')));
+  assert.deepEqual(READ_ONLY_SCOPES, ['https://www.googleapis.com/auth/drive.file']);
 });
 
 test('long history is not truncated at 5,000 records', () => {

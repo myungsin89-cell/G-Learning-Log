@@ -1,26 +1,27 @@
-# 새 버전의 기존 데이터 읽기 연결
+# G배움로그의 Google 파일 연결
 
 이 문서는 처음 로그인할 때의 읽기 경계를 설명한다. 새로 추가한 선택적 수집·피드백·비공개 메모 저장은 [live-workspace.md](./live-workspace.md)를 따른다.
 
 ## 연결 경계
 
-- 운영 앱(`/`, `/class`, `/dashboard`, `/student`)의 URL은 유지한다. 원본 Drive 파일을 복제/생성/변환하지 않는다.
-- 새 경로 `/next-version`은 `googleReadOnly.mjs`의 GET 전용 어댑터를 사용한다. 기존 쓰기 모듈이나 gapi 인증 토큰을 가져오지 않는다.
-- OAuth 권한은 `drive.readonly`, `spreadsheets.readonly`만 요청한다. 이미 허용했던 권한은 이번 요청에 합치지 않는다(`include_granted_scopes: false`).
-- 새 클라이언트 설정은 `NEXT_PUBLIC_GOOGLE_READONLY_CLIENT_ID` 또는 별도 localStorage 키에 저장한다. 기존 운영 환경 변수·브라우저 설정을 덮어쓰지 않는다. Client Secret, API 키는 필요하지 않다.
+- 운영 주소는 `https://baeumlog.chorok.app`이다. 예전 `/class`, `/dashboard`, `/student` 진입은 현재 G배움로그 화면으로 이동한다.
+- 현재 화면은 `googleReadOnly.mjs`의 읽기 어댑터와 별도의 생성·저장 어댑터를 사용한다.
+- OAuth 권한은 `drive.file`만 요청한다. Google Picker에서 교사가 선택한 파일과 G배움로그가 만든 파일만 연결하며, 이미 허용했던 넓은 권한은 이번 요청에 합치지 않는다(`include_granted_scopes: false`).
+- 운영 클라이언트 설정은 `NEXT_PUBLIC_GOOGLE_READONLY_CLIENT_ID`에 둔다. Picker용 공개 브라우저 키와 숫자 프로젝트 번호는 각각 `NEXT_PUBLIC_GOOGLE_API_KEY`, `NEXT_PUBLIC_GOOGLE_APP_ID`에 둔다. Client Secret은 사용하지 않는다.
 - 토큰은 브라우저 메모리에만 둔다. 새로고침하거나 만료되면 사용자의 클릭으로 다시 로그인한다. 앱이 닫혀 있을 때 수집하지 않는다.
 
 ## Google 설정
 
-사용자가 알려준 기존 프로젝트 ID는 `slidesight-505503`이다. 2026-10-09 콘솔 읽기 확인 결과 게시 상태는 외부/테스트 중이며, 기존 웹 클라이언트에 `http://localhost:3000`이 등록되어 있다. 따라서 현재 로컬 검증은 이미 허용된 주소와 기존 테스트 클라이언트로 진행할 수 있다. 이 확인 과정에서 Cloud 설정을 변경하지 않았다. 향후 정식 운영 전환 시 Google 정책에 따라 운영/테스트 프로젝트를 분리한다.
+운영 프로젝트 ID는 `slidesight-505503`이다. 운영 설정과 개발 설정을 분리한다. 운영 OAuth 클라이언트와 Picker 브라우저 키는 `https://baeumlog.chorok.app`만 허용하고, localhost·127.0.0.1·Vercel 기본 도메인·이전 개발 원본은 제거한다. 로컬 개발은 별도 Google Cloud 프로젝트와 별도 OAuth 클라이언트를 사용한다.
 
 테스트용 프로젝트에는 다음을 준비한다.
 
 1. Drive API, Sheets API, Slides API 활성화
 2. OAuth 앱 정보와 대상 설정, 외부 앱의 테스트 사용자는 기존 자료를 보유한 교사 Google 계정
 3. 웹 애플리케이션 OAuth 클라이언트 생성
-4. 승인된 JavaScript 원본: `http://127.0.0.1:3000`, 필요하면 `http://localhost:3000`. 별도 테스트 배포 후 해당 HTTPS 원본도 등록한다. 경로는 입력하지 않는다.
-5. `/next-version`의 연결 설정에 공개 Client ID 등록 후 Google 로그인과 읽기 권한 동의
+4. 승인된 JavaScript 원본: `https://baeumlog.chorok.app`. 경로는 입력하지 않는다.
+5. Picker API를 활성화하고 브라우저 키를 Drive API와 Picker API로 제한한다. 웹사이트 제한에는 `https://baeumlog.chorok.app/*`와 Picker iframe용 `https://docs.google.com/*`를 등록한다.
+6. Google 로그인 → 기존 자료 가져오기 또는 예시 슬라이드 선택 → 새 파일 생성·기록 저장을 실제 계정으로 확인한다.
 
 현재는 GIS 팝업 토큰 모델이다. 서버용 client secret이나 리다이렉트 콜백을 추가하지 않는다. 인증정보 생성과 실제 권한 동의는 계정 소유자의 승인/진행이 필요하다.
 

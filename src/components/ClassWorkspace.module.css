@@ -1,5 +1,6 @@
 .plainButton { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
 .listActions { display: flex; align-items: center; gap: 15px; }
+.assignmentActions { display: flex; align-items: center; justify-content: center; gap: 9px; }
 .resumeButton { position: relative; z-index: 2; padding: 6px 9px; border: 1px solid #e8d1a4; border-radius: 7px; background: #fff6e9; color: #854e28; font: inherit; font-size: 11px; cursor: pointer; }
 .cardTop { flex-wrap: wrap; }
 .cardActions { display: flex; align-items: center; gap: 7px; }
@@ -47,4 +48,4 @@
 .rosterError { color: #874327; font-size: 13px; line-height: 1.7; }
 .rosterError button { margin-top: 16px; }
 .plainButton:disabled { opacity: .6; cursor: wait; }
-@media(max-width:700px) { .headerActions { gap: 12px; font-size: 12px; } .headerActions > span { display: none; } .rosterGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } .rosterToolbar { align-items: flex-start; flex-direction: column; } }
+@media(max-width:700px) { .headerActions { gap: 12px; font-size: 12px; } .headerActions > span { display: none; } .rosterGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } .rosterToolbar { align-items: flex-start; flex-direction: column; } .assignmentActions { width: 100%; align-items: stretch; flex-direction: column; } .assignmentActions button { width: 100%; } }

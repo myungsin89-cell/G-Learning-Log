@@ -68,7 +68,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
             {children}
 
             <div className={styles.supported}>
-              학급·과제 생성과 기록 조회·저장 권한을 함께 연결합니다.
+              선택한 파일과 G배움로그가 만든 자료만 연결합니다.
             </div>
 
             <div className={styles.privacyNote}>

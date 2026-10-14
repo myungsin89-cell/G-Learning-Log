@@ -37,6 +37,7 @@ export default function ClassSelection({
   classItems,
   disabled = false,
   onRefresh,
+  onImport,
 }) {
   const items = classItems || classNames.map((name) => ({ id: name, name }));
   const canCreate = Boolean(onCreate || preview);
@@ -49,11 +50,7 @@ export default function ClassSelection({
           <h1 id="class-selection-title">어느 학급을 살펴볼까요?</h1>
           <p>학급을 선택해 과제를 열고, 학생의 작업 과정을 살펴보세요.</p>
         </div>
-        {!loading && items.length > 0 && canCreate && (
-          <button type="button" className={styles.createButton} onClick={onCreate} disabled={preview || disabled}>
-            <span aria-hidden="true">＋</span> 새 학급 만들기
-          </button>
-        )}
+        {!loading && items.length > 0 && canCreate && <div className={styles.headingActions}>{onImport && <button type="button" className={styles.importButton} onClick={onImport} disabled={preview || disabled}>기존 학급 가져오기</button>}<button type="button" className={styles.createButton} onClick={onCreate} disabled={preview || disabled}><span aria-hidden="true">＋</span> 새 학급 만들기</button></div>}
         {!canCreate && onRefresh && <button type="button" className={styles.refreshButton} onClick={onRefresh} disabled={disabled}>목록 새로고침</button>}
       </div>
 
@@ -64,9 +61,7 @@ export default function ClassSelection({
           <div className={styles.emptyMark} aria-hidden="true">{canCreate ? '＋' : '▤'}</div>
           <h2>{canCreate ? '첫 학급을 등록해 보세요' : '등록된 학급이 없어요'}</h2>
           <p>{canCreate ? '학생 명단을 등록하면 슬라이드 과제를 배부하고 작업 과정을 살펴볼 수 있어요.' : '학급을 등록한 Google 계정으로 로그인했는지 확인해 주세요.'}</p>
-          {canCreate && <button type="button" className={styles.createButton} onClick={onCreate} disabled={preview || disabled}>
-            첫 학급 등록하기
-          </button>}
+          {canCreate && <div className={styles.emptyActions}>{onImport && <button type="button" className={styles.importButton} onClick={onImport} disabled={preview || disabled}>기존 학급 가져오기</button>}<button type="button" className={styles.createButton} onClick={onCreate} disabled={preview || disabled}>첫 학급 등록하기</button></div>}
         </div>
       ) : (
         <>

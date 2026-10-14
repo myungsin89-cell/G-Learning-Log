@@ -1,7 +1,7 @@
 import { EVENT_HEADERS, eventRow, parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 import { adaptDriveComments } from './storedWorkRecords.mjs';
 
-export const WORKSPACE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.file'];
+export const WORKSPACE_SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const mimeType = 'application/vnd.google-apps.spreadsheet';
 const marker = 'teacher-workspace-v2';
 const fields = 'id,name,mimeType,ownedByMe,appProperties,permissions(type,role)';

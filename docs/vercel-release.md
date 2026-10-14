@@ -1,18 +1,18 @@
-# 신버전 별도 배포
+# G배움로그 운영 배포
 
-기존 운영 배포와 Google 파일을 유지하며 별도 Vercel 프로젝트에서 신버전을 제공한다. 기존 main 대신 release 브랜치를 사용한다.
+기존 Google 파일을 유지하며 현재 G배움로그를 Vercel 운영 프로젝트에서 제공한다.
 
 - Vercel 프로젝트: `g-learning-log-next`
 - 운영 브랜치: `release/next-version-2026-10-09`
-- 운영 원본: `https://baeumlog.chorok.app` (기존 Vercel 주소도 유지)
-- 개인정보처리방침: `https://g-learning-log-next.vercel.app/privacy`
-- 이용 안내: `https://g-learning-log-next.vercel.app/terms`
+- 운영 원본: `https://baeumlog.chorok.app`
+- 개인정보처리방침: `https://baeumlog.chorok.app/privacy`
+- 이용 안내: `https://baeumlog.chorok.app/terms`
 
 운영 원본은 Google OAuth 허용 원본에 별도로 등록해야 한다. 등록·로그인 확인과 Google 심사 완료는 별개다.
 
 ## 공개 환경 변수
 
-- `NEXT_PUBLIC_APP_ENTRY=next`: 도메인 첫 화면을 신버전 로그인으로 연결한다.
+- `NEXT_PUBLIC_APP_ENTRY=next`: 도메인 첫 화면과 예전 진입 경로를 현재 G배움로그로 연결한다.
 - `NEXT_PUBLIC_GOOGLE_READONLY_CLIENT_ID`: slidesight-505503 프로젝트의 기존 웹 OAuth 클라이언트 ID. 공개 설정이며 클라이언트 비밀 키를 사용하지 않는다.
 - `NEXT_PUBLIC_APP_MODE`: 비워 둔다. readonly는 쓰기 기능을 막는 별도 테스트 모드다.
 - `NEXT_PUBLIC_SUPPORT_EMAIL`: `myungsin89@gmail.com`. 미설정 시에도 같은 직접 문의 이메일을 코드 기본값으로 제공한다.
@@ -21,9 +21,9 @@
 
 ## Google 연결과 인증 준비
 
-현재 신버전은 GIS `initTokenClient` 팝업 모델이다. 클라이언트 비밀 키와 서버 콜백 URL을 넣지 않는다. 실제 배포 도메인의 HTTPS 원본을 기존 웹 OAuth 클라이언트의 승인된 JavaScript 원본에 추가하고 기존 원본은 유지한다.
+현재 운영 버전은 GIS `initTokenClient` 팝업 모델이다. 클라이언트 비밀 키와 서버 콜백 URL을 넣지 않는다. 운영 OAuth 클라이언트의 승인된 JavaScript 원본은 `https://baeumlog.chorok.app`만 사용한다. localhost, 127.0.0.1, Vercel 기본 도메인과 이전 운영 원본은 운영 클라이언트에서 제거한다. 개발이 필요하면 별도 Google Cloud 프로젝트와 OAuth 클라이언트를 사용한다.
 
-최초 교사 로그인에서 Drive/Sheets 읽기, 앱 사용 파일 편집(drive.file), 예시 슬라이드 주소로 복사·배부하기 위한 Drive 권한을 함께 요청한다. 유효한 토큰을 조회·학급 생성·과제 배부·기록 저장에서 재사용하며, 추가 기능마다 계정 선택을 다시 열지 않는다. 토큰은 메모리에만 보관하므로 새로고침·로그아웃·만료 후에는 연결이 필요할 수 있다. 기존 파일 탐색과 임의 주소 복사를 지원하므로 좁은 권한만 사용하는 앱이라고 설명하면 안 된다. 권한별 사용 화면을 실제 계정으로 검증하고 심사 자료에 설명한다.
+최초 교사 로그인에서 비민감 권한인 `drive.file` 하나만 요청한다. 유효한 토큰은 조회·학급 생성·과제 배부·기록 저장에서 재사용하며, 추가 기능마다 계정 선택을 다시 열지 않는다. 예시 슬라이드와 예전 학급·과제는 Google Picker에서 교사가 직접 선택한다. 새 학급·과제·학생 슬라이드·교사 기록 시트는 앱이 만들기 때문에 이후 자동으로 표시할 수 있다. 토큰은 메모리에만 보관하므로 새로고침·로그아웃·만료 후에는 연결이 필요할 수 있다.
 
 과제 관찰 화면은 유효한 로그인 연결로 저장소를 초기화한 뒤 자동 확인을 시작한다. 초기화가 끝나기 전에 학생별 중지·과제 종료 상태를 확인하며, 종료 과제는 저장된 기록만 표시한다. 연결 실패·만료 시 자동 OAuth 팝업을 열지 않고 사용자에게 다시 연결을 안내한다.
 

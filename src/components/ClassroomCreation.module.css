@@ -7,6 +7,11 @@
 .fields > :first-child { margin-top: 0; }
 .context { display: flex; align-items: center; justify-content: space-between; margin-bottom: 23px; padding: 13px 15px; border-radius: 10px; background: #f1f5ed; color: #396a50; font-size: 13px; font-weight: 700; }
 .context span { color: #788578; font-size: 11px; font-weight: 450; }
+.pickerField { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px; border: 1px solid #dce6dc; border-radius: 10px; background: #f8faf7; }
+.pickerField button { flex: 0 0 auto; min-height: 40px; }
+.pickedFile { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pickedFile strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #294c3b; font-size: 13px; }
+.pickedFile small, .pickerEmpty { color: #708074; font-size: 11px; line-height: 1.5; }
 .share { display: flex; align-items: flex-start; gap: 10px; margin-top: 23px; color: #3e6150; font-size: 13px; line-height: 1.65; }
 .share input { margin-top: 4px; accent-color: #246b55; }
 .share small { display: block; color: #77847a; margin-top: 5px; font-size: 11px; }
@@ -48,3 +53,4 @@
 @keyframes creationSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .progressBar::-webkit-progress-value { transition: none; } }
 @media (max-width: 600px) { .progressBody { padding: 22px 20px 25px; } .progressAmount strong { font-size: 52px; } }
+@media (max-width: 600px) { .pickerField { align-items: stretch; flex-direction: column; } .pickerField button { width: 100%; } }

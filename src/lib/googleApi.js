@@ -80,7 +80,7 @@ export function initGoogleSDKs(onSuccess, onFailure) {
       // Load GIS
       tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: config.clientId,
-        scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/presentations https://www.googleapis.com/auth/spreadsheets',
+        scope: 'https://www.googleapis.com/auth/drive.file',
         callback: (resp) => {
           if (resp.error) {
             console.error('Auth error:', resp);

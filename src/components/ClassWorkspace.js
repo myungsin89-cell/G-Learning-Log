@@ -86,7 +86,7 @@ function AssignmentTrashDialog({ assignment, onDelete, onClose }) {
   </dialog>;
 }
 
-export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onResume, onEdit, onSaveEdit, onDelete, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
+export default function ClassWorkspace({ classItem, assignments, roster, rosterError, busy, onBack, onOpen, onCreate, onImport, onResume, onEdit, onSaveEdit, onDelete, onRefresh, onRetryRoster, account, onLogout, onReconnect, children }) {
   const [search, setSearch] = useState('');
   const [showRoster, setShowRoster] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -111,7 +111,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
       </div>
       {children}
       <section className={styles.assignments} aria-labelledby="assignment-title">
-        <div className={styles.sectionHeading}><div className={styles.sectionTitle}><h2 id="assignment-title">수업 과제</h2><span>{assignments.length}개</span></div>{onCreate && <button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>＋ 새 과제 만들기</button>}</div>
+        <div className={styles.sectionHeading}><div className={styles.sectionTitle}><h2 id="assignment-title">수업 과제</h2><span>{assignments.length}개</span></div>{onCreate && <div className={real.assignmentActions}>{onImport && <button className={styles.secondaryButton} onClick={onImport} disabled={busy}>기존 과제 가져오기</button>}<button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>＋ 새 과제 만들기</button></div>}</div>
         <div className={styles.toolbar}><div className={real.listActions}><span className={real.listCount}>전체 과제 {assignments.length}개</span><button className={styles.textButton} onClick={onRefresh} disabled={busy}>새로고침</button></div><label className={styles.search}><Icon name="search" size={17} /><input aria-label="과제 검색" placeholder="과제 검색" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
         <div className={styles.grid}>
           {visible.map((assignment) => <article key={assignment.id} className={styles.card}>
@@ -129,7 +129,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
             <button className={styles.cardButton} disabled={busy} onClick={() => onOpen(assignment)} aria-label={`${assignment.name} ${assignment.slidesTrashed ? '저장된 기록 보기' : '학생 작업 살펴보기'}`}><span>{assignment.slidesTrashed ? '저장된 기록 보기' : '학생 작업 살펴보기'}</span><Icon name="arrow" size={17} /></button>
           </article>)}
         </div>
-        {!visible.length && <div className={styles.empty}><h3>{search ? '검색한 과제가 없어요' : '첫 과제를 만들어 보세요'}</h3><p>{search ? '다른 과제 이름을 검색해 주세요.' : '수업에서 사용할 슬라이드 템플릿을 학생별로 배부할 수 있어요.'}</p>{search ? <button className={styles.secondaryButton} onClick={() => setSearch('')}>전체 과제 보기</button> : onCreate && <button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>새 과제 만들기</button>}</div>}
+        {!visible.length && <div className={styles.empty}><h3>{search ? '검색한 과제가 없어요' : '첫 과제를 만들어 보세요'}</h3><p>{search ? '다른 과제 이름을 검색해 주세요.' : '새 과제를 만들거나 이전 G배움로그 과제 시트를 가져올 수 있어요.'}</p>{search ? <button className={styles.secondaryButton} onClick={() => setSearch('')}>전체 과제 보기</button> : onCreate && <div className={real.assignmentActions}>{onImport && <button className={styles.secondaryButton} onClick={onImport} disabled={busy}>기존 과제 가져오기</button>}<button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>새 과제 만들기</button></div>}</div>}
       </section>
       <MadeByStamp />
     </main>

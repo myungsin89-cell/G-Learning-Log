@@ -37,6 +37,7 @@
 }
 
 .headerActions { gap: 21px; }
+.headingActions, .emptyActions { display: flex; align-items: center; gap: 10px; }
 .headerLabel { color: #718277; font-size: 13px; font-weight: 650; }
 
 .logout {
@@ -110,6 +111,9 @@
 }
 
 .createButton:hover:not(:disabled) { background: #1d5945; }
+.importButton { flex: 0 0 auto; min-height: 48px; padding: 0 17px; border: 1px solid #cbdccf; border-radius: 11px; background: #fff; color: #356b52; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.importButton:hover:not(:disabled) { border-color: #8fb69b; background: #f5faf5; }
+.importButton:disabled { opacity: .6; cursor: wait; }
 .createButton:disabled, .cardAction:disabled, .menuPanel button:disabled { cursor: default; }
 
 .loading {
@@ -291,7 +295,8 @@
   .headingRow { align-items: flex-start; flex-direction: column; gap: 23px; }
   .heading h1 { font-size: 34px; }
   .heading p { font-size: 14px; }
-  .createButton { width: 100%; }
+  .headingActions, .emptyActions { width: 100%; align-items: stretch; flex-direction: column; }
+  .createButton, .importButton { width: 100%; }
   .listHeading { margin-top: 40px; }
   .grid { grid-template-columns: 1fr; gap: 13px; }
   .card, .cardAction { min-height: 186px; }

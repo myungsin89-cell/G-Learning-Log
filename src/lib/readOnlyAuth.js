@@ -2,7 +2,7 @@ import { READ_ONLY_SCOPES } from './googleReadOnly.mjs';
 import { WORKSPACE_SCOPES } from './googleWorkspace.mjs';
 
 const CONFIG_KEY = 'gbaeum_readonly_client_id';
-export const TEACHER_SCOPES = [...WORKSPACE_SCOPES, 'https://www.googleapis.com/auth/drive'];
+export const TEACHER_SCOPES = [...WORKSPACE_SCOPES];
 // Tokens stay in memory and never overwrite slidesight_access_token.
 let session = null;
 let workspaceSession = null;
@@ -41,7 +41,7 @@ function requestSession(scopes, writable, { reuse = true, selectAccount = false,
       callback(response) {
         if (revision !== sessionRevision) { reject(new Error('Google 연결이 변경됐습니다. 다시 로그인해 주세요.')); return; }
         if (response.error || !response.access_token) { reject(new Error('Google 로그인을 완료하지 못했습니다.')); return; }
-        if (!oauth.hasGrantedAllScopes(response, ...scopes)) { reject(new Error(writable ? '학급·과제 생성, 기록 조회·저장에 필요한 Google 권한을 모두 허용해 주세요.' : 'Drive와 Sheets의 읽기 권한을 모두 허용해 주세요.')); return; }
+        if (!oauth.hasGrantedAllScopes(response, ...scopes)) { reject(new Error(writable ? '선택한 Google 파일과 앱이 만든 자료를 조회·저장하는 권한을 허용해 주세요.' : '선택한 Google 파일을 읽는 권한을 허용해 주세요.')); return; }
         const result = { accessToken: response.access_token, expiresAt: Date.now() + Number(response.expires_in || 3600) * 1000, scopes: [...scopes], clientId };
         if (writable) workspaceSession = result;
         if (!writable || primary) session = result;

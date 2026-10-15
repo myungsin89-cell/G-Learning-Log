@@ -184,10 +184,10 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     setModal({ type: 'student', number });
     const student = students.find((item) => studentKey(item) === number);
     // Original slides open in a new tab. Their text is loaded only on explicit request.
-    if (readOnly && student?.slideId && onLoadComments && (!workspace || (workspace.collectionReady && !recordingPaused(student)))) {
+    if (readOnly && student?.slideId && onLoadComments && !slidesTrashed) {
       setNotice('슬라이드 댓글을 불러오는 중입니다.');
       try {
-        const conversations = workspace ? await workspace.refreshComments(student) : await onLoadComments(student.slideId);
+        const conversations = workspace ? await workspace.refreshComments(student, { manual: true }) : await onLoadComments(student.slideId);
         if (!workspace) { setThreads((previous) => ({ ...previous, [number]: conversations })); setCommentsLoaded((previous) => [...new Set([...previous, number])]); }
         setNotice('슬라이드 댓글을 확인했습니다. 교사 답글을 제외한 댓글은 답변 대상으로 표시합니다.');
       } catch (error) { setNotice(error.message || '댓글을 불러오지 못했습니다.'); }
@@ -336,7 +336,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
       headingMeta={<StatusBadge status={recordingPaused(activeStudent) ? 'paused' : effectiveStatus(activeStudent)} label={recordingPaused(activeStudent) ? '기록 중지' : statuses[effectiveStatus(activeStudent)].label} />}>
       {inactiveMinutes(activeStudent) !== null && <p className={styles.drawerNotice}>{inactiveMinutes(activeStudent)}분간 변화가 확인되지 않았어요. 읽거나 생각하는 중일 수 있으니 학생의 상황을 함께 살펴보세요.</p>}
       {notice && <p className={styles.drawerNotice} role="status">{notice}</p>}
-      <StudentWorkDetail collection={collectionControl} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} slidesTrashed={slidesTrashed} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} onRefreshComments={() => workspace?.refreshComments(activeStudent)} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
+      <StudentWorkDetail collection={collectionControl} templateBaseline={historyBaseline} readOnly={readOnly} canWrite={canWrite} canSaveMemo={Boolean(workspace && activeStudent.slideId && process.env.NEXT_PUBLIC_APP_MODE !== 'readonly')} slidesTrashed={slidesTrashed} workspaceError={workspace?.error} commentsError={workspace?.commentsErrors[studentKey(activeStudent)]} commentsLoaded={commentsLoaded.includes(studentKey(activeStudent))} onRefreshComments={() => workspace?.refreshComments(activeStudent, { manual: true })} onReviewComment={workspace ? (message, value) => workspace.reviewComment(activeStudent, message, value) : null} presentationState={presentations[studentKey(activeStudent)]} onRefreshPresentation={() => refreshPresentation(activeStudent)} key={studentKey(activeStudent)} student={activeStudent} averages={averages} mode={mode} setMode={setMode} threads={threads[studentKey(activeStudent)] || []} unread={unread(activeStudent)} onFeedback={addFeedback} onReply={addReply} memo={memos[studentKey(activeStudent)] || ''} onMemo={saveMemo} surge={activeStudent.status === 'surge' && (readOnly || mode === 'lesson')} reviewed={reviewed.includes(studentKey(activeStudent))} onReview={review} />
     </PreviewModal>}
   </div>;
 }

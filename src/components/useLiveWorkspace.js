@@ -236,10 +236,12 @@ export default function useLiveWorkspace(data, { authorize, loadWorkspace, loadP
     return (await refs.current.gate.read(storeStudentKey(student), () => loadPresentation(student.slideId))).data;
   }
 
-  async function refreshComments(student) {
+  async function refreshComments(student, { manual = false } = {}) {
     const key = student.id;
     try {
-      const threads = (await refs.current.gate.read(storeStudentKey(student), () => loadComments(student.slideId))).data;
+      // Opening a student explicitly may read existing comments even while
+      // automatic monitoring is paused or its private store is unavailable.
+      const threads = manual ? await loadComments(student.slideId) : (await refs.current.gate.read(storeStudentKey(student), () => loadComments(student.slideId))).data;
       if (refs.current.mounted) {
         setConversations((previous) => ({ ...previous, [key]: mergePostedTeacherReplies(threads, previous[key] || [], refs.current.postedReplies.filter((item) => item.studentId === key)) }));
         setCommentsLoaded((previous) => [...new Set([...previous, key])]);

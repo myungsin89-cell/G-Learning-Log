@@ -56,7 +56,7 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, slidesTrashed = false, workspaceError, commentsError, onRefreshComments, presentationState, onRefreshPresentation, templateBaseline, collection }) {
+export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, slidesTrashed = false, workspaceError, commentsError, commentsLoaded = false, onRefreshComments, presentationState, onRefreshPresentation, templateBaseline, collection }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [reviewBusy, setReviewBusy] = useState(null);
@@ -104,7 +104,7 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
 
     <section className={styles.detailSection} id={`feedback-${student.id || student.number}`}><div className={styles.panelHeading}><h3>슬라이드 댓글과 피드백</h3>{unread > 0 && <span className={styles.newCommentCount}>새 댓글 {unread}개</span>}</div><p className={styles.smallNote}>{readOnly ? '학생 슬라이드에 남긴 댓글과 교사 답글을 함께 보여요.' : '슬라이드에서 남긴 댓글도 같은 대화로 표시하는 예시입니다.'}</p>
       {commentsError && <p className={styles.slideError} role="alert">댓글을 불러오지 못했습니다. {commentsError}</p>}
-      {readOnly && commentsError && onRefreshComments && <button className={styles.textAction} disabled={commentBusy || collection?.paused || (collection && !collection.ready)} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* Preserve existing conversations and display the reconnect guidance below. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : '댓글 다시 시도'}</button>}
+      {readOnly && (!commentsLoaded || commentsError) && !slidesTrashed && onRefreshComments && <button className={styles.textAction} disabled={commentBusy} onClick={async () => { setCommentBusy(true); try { await onRefreshComments(); } catch { /* The request error appears above; keep earlier conversations visible. */ } finally { setCommentBusy(false); } }}>{commentBusy ? '댓글 확인 중…' : commentsError ? '댓글 다시 시도' : '댓글 확인'}</button>}
       <div className={styles.conversationList}>{threads.map((thread) => {
         const threadPending = pendingCommentMessages([thread]);
         const lastPending = threadPending.at(-1);
@@ -118,9 +118,9 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
           </div>)}
           {!lastPending && canReplyTo(thread) && (replying === thread.id ? replyEditor(thread) : <button className={styles.textAction} onClick={() => setReplying(thread.id)}>추가 답글 남기기</button>)}
         </article>;
-      })}{threads.length === 0 && <p className={styles.feedbackEmpty}>{commentsError ? '현재 표시할 댓글이 없어요. 조회 오류를 확인해 주세요.' : '아직 슬라이드 댓글이나 피드백이 없어요.'}</p>}</div>
+      })}{threads.length === 0 && <p className={styles.feedbackEmpty}>{commentsError ? '현재 표시할 댓글이 없어요. 조회 오류를 확인해 주세요.' : readOnly && !commentsLoaded ? '슬라이드 댓글을 아직 확인하지 않았어요.' : '아직 슬라이드 댓글이나 피드백이 없어요.'}</p>}</div>
       {workspaceError && workspaceError !== commentsError && <p className={styles.slideError} role="alert">{workspaceError}</p>}
-      {collection?.paused || (collection && !collection.ready) ? <p className={styles.smallNote}>{slidesTrashed ? '학생 슬라이드를 휴지통으로 옮겼습니다. 저장된 기록만 확인할 수 있어요.' : collection?.ended ? '저장된 피드백을 보고 있습니다. 새 댓글 확인과 피드백 작성은 모니터링을 재개한 뒤 가능합니다.' : '기록을 재개하면 새 댓글과 피드백을 연결할 수 있습니다.'}</p> : writable ? <SaveForm label="학생에게 전할 피드백" name="feedback" reset onSave={onFeedback} placeholder="잘한 점이나 다음에 살펴볼 내용을 전해주세요." buttonLabel="피드백 남기기" /> : <p className={styles.smallNote}>피드백을 작성하려면 Google 연결을 확인해 주세요.</p>}
+      {collection?.paused || (collection && !collection.ready) ? <p className={styles.smallNote}>{slidesTrashed ? '학생 슬라이드를 휴지통으로 옮겼습니다. 저장된 기록만 확인할 수 있어요.' : collection?.ended ? '모니터링은 종료됐습니다. 기존 댓글은 확인할 수 있고, 답글을 남기려면 모니터링을 재개해 주세요.' : '자동 기록은 중지됐습니다. 기존 댓글은 확인할 수 있고, 답글을 남기려면 기록을 재개해 주세요.'}</p> : writable ? <SaveForm label="학생에게 전할 피드백" name="feedback" reset onSave={onFeedback} placeholder="잘한 점이나 다음에 살펴볼 내용을 전해주세요." buttonLabel="피드백 남기기" /> : <p className={styles.smallNote}>피드백을 작성하려면 Google 연결을 확인해 주세요.</p>}
     </section>
     <section className={styles.detailSection}><h3>교사 메모 <small className={styles.privateMemoLabel}>교사만 보기</small></h3><p className={styles.smallNote}>메모 저장을 누르면 교사 전용 Google 시트에 저장합니다. 학생에게 공유되지 않으며 슬라이드에는 기록하지 않습니다.</p>{(!readOnly || canSaveMemo) ? <SaveForm key={student.id || student.number} label="교사 메모 내용" name="memo" defaultValue={memo} rows={3} maxLength={3000} onSave={onMemo} placeholder="슬라이드를 보며 기억할 내용이나 관찰한 모습을 적어주세요." buttonLabel="메모 저장" /> : <><p className={styles.storedMemo}>{memo || '저장된 교사 메모가 없습니다.'}</p><p className={styles.smallNote}>{student.slideId ? '현재 화면에서는 저장된 메모를 확인할 수 있습니다.' : '학생 슬라이드를 연결하면 메모를 저장할 수 있습니다.'}</p></>}</section>
     {readOnly && !slidesTrashed && <details className={styles.optionalContents}><summary>슬라이드에 쓴 글 보기</summary><p className={styles.smallNote}>각 장에 쓴 글만 모아 읽는 기능이에요. 이미지와 배치는 위의 ‘슬라이드 열기’에서 확인할 수 있어요.</p><CurrentSlideContents paused={collection?.paused || (collection && !collection.ready)} student={student} state={presentationState} onRefresh={onRefreshPresentation} /></details>}

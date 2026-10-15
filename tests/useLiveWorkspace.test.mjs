@@ -33,7 +33,7 @@ function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoSt
     ...(twoStudents ? [{ id: 'b', slideId: 'b', number: 4, name: '테스트B', records: [], chars: 0, images: 0, slides: 1 }] : []),
   ] };
   const saved = { events: structuredClone(events), storeId: 'test-private-store', invalidRows: [] };
-  const audit = { authorization: [], setups: 0, reads: [], comments: 0, commentThreads: [], posts: [], chars: 120, failSetup, failReads: false };
+  const audit = { authorization: [], setups: 0, reads: [], comments: 0, commentThreads: [], posts: [], chars: 120, failSetup, failReads: false, failComments: false };
   const api = {
     initialize: async () => { audit.setups++; if (waitForSetup) await waitForSetup; return structuredClone(saved); },
     append: async (items, { shouldInclude = () => true } = {}) => {
@@ -54,7 +54,7 @@ function fixture(t, { events = [], waitForSetup = null, failSetup = false, twoSt
       if (audit.failReads) throw new Error('접근할 수 없음');
       return { checkedAt: new Date().toISOString(), charCount: audit.chars, imageCount: 1, slideCount: 1, pages: [{ id: 'page', number: 1, chars: audit.chars, images: 1, text: '가'.repeat(audit.chars), notes: '' }] };
     },
-    loadComments: async () => { audit.comments++; return structuredClone(audit.commentThreads); },
+    loadComments: async () => { audit.comments++; if (audit.failComments) throw new Error('슬라이드 접근 권한 없음'); return structuredClone(audit.commentThreads); },
   };
   let current, root;
   const container = document.createElement('div'); document.body.append(container);
@@ -195,6 +195,20 @@ test('student pause survives automatic setup, and assignment end survives closin
   const before = f.audit.reads.length; await f.unmount(); await f.mount(); await f.tick(60000);
   assert.equal(f.current().monitoringEnded, true); assert.equal(f.current().running, false); assert.equal(f.audit.reads.length, before);
   assert.equal(f.current().students[1].records.length, 1);
+});
+
+test('opening a paused student explicitly loads earlier comments and reports access errors', async (t) => {
+  const f = fixture(t, { events: [control('pause-a', 'collection', { paused: true }, 'slide:a')] }); await f.mount();
+  assert.equal(f.audit.comments, 0);
+  f.audit.commentThreads = [{ id: 'old-question', role: 'student', origin: 'google_slides', content: '어제 남긴 질문', replies: [] }];
+  await act(async () => { await f.current().refreshComments(f.current().students[0], { manual: true }); });
+  assert.equal(f.audit.comments, 1);
+  assert.equal(f.current().commentsLoaded.includes('a'), true);
+  assert.equal(f.current().conversations.a[0].content, '어제 남긴 질문');
+  f.audit.failComments = true;
+  await act(async () => { await assert.rejects(f.current().refreshComments(f.current().students[0], { manual: true }), /슬라이드 접근 권한 없음/); });
+  assert.match(f.current().commentsErrors.a, /슬라이드 접근 권한 없음/);
+  assert.equal(f.current().conversations.a[0].content, '어제 남긴 질문');
 });
 
 test('ending while automatic setup is pending blocks the first read and shares one private-store initialization', async (t) => {

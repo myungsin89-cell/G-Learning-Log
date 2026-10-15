@@ -5,6 +5,7 @@ import { foldWorkspace } from './liveWorkRecords.mjs';
 import { JOIN_HEADERS } from './studentEntry.mjs';
 import { assertRosterConfirmation, ROSTER_NOTICE_VERSION } from './classroomPrivacy.mjs';
 import { filePermissions } from './drivePrivacy.mjs';
+import { assignmentFileName, parseAssignmentFileName } from './assignmentFileNames.mjs';
 
 const studentHeaders = ['student_number', 'student_name', 'slide_id', 'slide_url', 'status', 'last_active_at', 'current_char_count', 'current_slide_count', 'image_count', 'keyword_count', 'keywords_used', 'blank_slide_count', 'focus_ratio', 'teacher_feedback', 'last_checked_at', 'share_status'];
 const logHeaders = ['student_name', 'timestamp', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'copied_text', 'record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'];
@@ -118,9 +119,10 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       const assignment = await request('drive', `files/${encodeURIComponent(assignmentId)}`, { params: [['fields', 'id,name,mimeType,ownedByMe,trashed,appProperties']] });
       const creationId = assignment.appProperties?.gbaeumCreation;
       const managed = assignment.appProperties?.gbaeumStore === 'classroom-assignment-v2';
+      const parsedName = parseAssignmentFileName(assignment.name);
       if (assignment.trashed || !assignment.ownedByMe || assignment.mimeType !== 'application/vnd.google-apps.spreadsheet' ||
           (managed ? !creationId : Boolean(assignment.appProperties?.gbaeumStore || creationId)) ||
-          !assignment.name.startsWith(`SlideSight_DB_[${classroomName(className)}]_[`) || !assignment.name.endsWith(']')) {
+          parsedName?.className !== classroomName(className)) {
         throw new Error('앱에서 만든 이 학급의 과제인지 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
       }
       const kinds = ['student-copy-v2', 'assignment-template-v2', 'student-join-v2'];
@@ -232,7 +234,7 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       const template = await request('drive', `files/${encodeURIComponent(templateId)}`, { params: [['fields', 'id,mimeType,capabilities(canCopy)']] });
       if (template.mimeType !== 'application/vnd.google-apps.presentation' || template.capabilities?.canCopy === false) throw new Error('복사할 수 있는 Google 슬라이드 템플릿을 선택해 주세요.');
       report('과제 저장 공간과 배부 원본 준비 중…', 5);
-      const file = await ensureFile(jobId, `SlideSight_DB_[${className}]_[${name}]`, 'classroom-assignment-v2');
+      const file = await ensureFile(jobId, assignmentFileName(className, name), 'classroom-assignment-v2');
       if (!['shared', 'individual'].includes(entryMode)) throw new Error('학생 접속 방식을 확인해 주세요.');
       const value = { className, name, templateUrl: templateId, roster: students, keywordsText: keywords.join(', '), ...(Array.isArray(inputKeywords) ? { keywords } : {}), shareSlides, entryMode };
       await plan(file, jobId, 'classroom-assignment-v2', value, ['students', 'activity_logs']);

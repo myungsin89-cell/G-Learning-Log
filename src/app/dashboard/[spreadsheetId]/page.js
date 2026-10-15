@@ -19,6 +19,7 @@ import {
 import MadeByStamp from '@/components/MadeByStamp';
 import BrandMark from '@/components/BrandMark';
 import { isTextSurge } from '@/lib/workRecords.mjs';
+import { parseAssignmentFileName } from '@/lib/assignmentFileNames.mjs';
 
 // Helper to extract new text inserted/pasted by comparing snapshot strings
 function extractDiffText(prev = '', curr = '') {
@@ -713,8 +714,7 @@ export default function Dashboard() {
         })
       );
       const rawName = fileMeta.result.name;
-      const match = rawName.match(/SlideSight_DB_\[(.*?)\]/);
-      setClassTitle(match ? match[1] : rawName.replace('SlideSight_DB_', ''));
+      setClassTitle(parseAssignmentFileName(rawName)?.className || rawName);
 
       // 1) First load existing sheet DB data and render immediately without delay
       const { students: loadedStudents, logs: loadedLogs, baseline } = await loadSpreadsheetData(spreadsheetId);

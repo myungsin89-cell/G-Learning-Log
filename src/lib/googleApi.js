@@ -1,5 +1,6 @@
 // Client-side Google API wrapper for SlideSight
 import { createGoogleClassroom } from './googleClassroom.mjs';
+import { assignmentFileName, parseAssignmentFileName } from './assignmentFileNames.mjs';
 
 // Load config from process.env or localStorage
 export function getGoogleConfig() {
@@ -177,7 +178,7 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
   assertGoogleWritesAllowed();
   if (!getAccessToken()) throw new Error('구글 로그인 인증이 필요합니다.');
 
-  const title = `SlideSight_DB_[${className}]_[${assignmentName}]`;
+  const title = assignmentFileName(className, assignmentName);
   
   // 1) 스프레드시트 파일 생성
   const response = await window.gapi.client.sheets.spreadsheets.create({
@@ -561,9 +562,7 @@ export async function fetchSlideStats(slideId, keywords = []) {
 export async function fetchAssignmentsList(className = null) {
   if (!getAccessToken()) throw new Error('Not authenticated');
 
-  const query = className 
-    ? `name contains 'SlideSight_DB_[${className}]' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`
-    : `name contains 'SlideSight_DB_' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`;
+  const query = "(name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
 
   const response = await window.gapi.client.drive.files.list({
     q: query,
@@ -571,27 +570,15 @@ export async function fetchAssignmentsList(className = null) {
     orderBy: 'createdTime desc'
   });
 
-  return response.result.files.map(file => {
-    // Extract assignmentName from "SlideSight_DB_[className]_[assignmentName]"
-    const parts = file.name.split('_');
-    let displayTitle = file.name;
-    
-    if (parts.length >= 4) {
-      const assignmentPart = parts.slice(3).join('_');
-      // Remove square brackets [assignmentName] -> assignmentName
-      const match = assignmentPart.match(/^\[(.*?)\]$/) || [null, assignmentPart];
-      displayTitle = match[1];
-    } else {
-      // Fallback
-      displayTitle = file.name.replace('SlideSight_DB_', '');
-    }
-
-    return {
+  return (response.result.files || []).flatMap(file => {
+    const parsed = parseAssignmentFileName(file.name);
+    if (!parsed || (className && parsed.className !== className)) return [];
+    return [{
       id: file.id,
-      name: displayTitle,
+      name: parsed.assignmentName,
       fullName: file.name,
       createdTime: file.createdTime
-    };
+    }];
   });
 }
 

@@ -159,7 +159,7 @@ test('class, assignment, records and comment reads use only GET, including pagin
     const parsed = new URL(url);
     let result;
     if (parsed.pathname === '/drive/v3/files') {
-      result = parsed.searchParams.get('q').includes('학급명단') ? { files: [{ id: 'roster', name: '명단' }] } : parsed.searchParams.get('pageToken') ? { files: [{ id: 'original-sheet', name: 'SlideSight_DB_[5학년 2반]_[달 관찰]' }, { id: 'other', name: 'SlideSight_DB_[다른 반]_[과제]' }] } : { files: [], nextPageToken: 'page-2' };
+      result = parsed.searchParams.get('q').includes('학급명단') ? { files: [{ id: 'roster', name: '명단' }] } : parsed.searchParams.get('pageToken') ? { files: [{ id: 'original-sheet', name: 'SlideSight_DB_[5학년 2반]_[달 관찰]' }, { id: 'new-sheet', name: 'G배움로그_과제_[5학년 2반]_[새 과제]' }, { id: 'other', name: 'SlideSight_DB_[다른 반]_[과제]' }] } : { files: [], nextPageToken: 'page-2' };
     } else if (parsed.pathname.includes('/comments')) {
       result = parsed.searchParams.get('pageToken') ? { comments: [] } : { comments: [{ id: 'c', author: { me: true } }], nextPageToken: 'comments-2' };
     } else if (parsed.pathname.endsWith('values:batchGet')) {
@@ -169,7 +169,7 @@ test('class, assignment, records and comment reads use only GET, including pagin
   });
   const classes = await api.listClasses();
   const assignments = await api.listAssignments(classes[0].name);
-  assert.equal(assignments.length, 1);
+  assert.deepEqual(assignments.map((assignment) => assignment.name), ['달 관찰', '새 과제']);
   const data = await api.loadAssignment(assignments[0], classes[0].name);
   assert.equal(data.students[0].slideId, 'original-slide');
   assert.equal((await api.loadComments('original-slide')).length, 1);

@@ -2,6 +2,7 @@ import { adaptStoredAssignment, adaptDriveComments } from './storedWorkRecords.m
 import { adaptPresentation, parsePresentationId } from './slideContents.mjs';
 import { parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 import { filePermissions } from './drivePrivacy.mjs';
+import { parseAssignmentFileName } from './assignmentFileNames.mjs';
 
 // This module deliberately has no dependency on the legacy writer or gapi token.
 export const READ_ONLY_SCOPES = [
@@ -71,9 +72,11 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
     },
     async listAssignments(className) {
       // Filter exact class prefixes locally; a class name never becomes Drive query syntax.
-      const files = await listFiles("name contains 'SlideSight_DB_' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
-      const prefix = `SlideSight_DB_[${className}]_[`;
-      return files.filter((file) => file.name.startsWith(prefix) && file.name.endsWith(']')).map((file) => ({ id: file.id, name: file.name.slice(prefix.length, -1), createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }));
+      const files = await listFiles("(name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
+      return files.flatMap((file) => {
+        const parsed = parseAssignmentFileName(file.name);
+        return parsed?.className === className ? [{ id: file.id, name: parsed.assignmentName, createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }] : [];
+      });
     },
     async loadCreationPlan(assignment) {
       if (!assignment.creationId) throw new Error('이 과제의 배부 정보를 찾을 수 없습니다.');

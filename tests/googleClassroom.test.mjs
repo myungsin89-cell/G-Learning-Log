@@ -5,11 +5,18 @@ import { createGoogleReader } from '../src/lib/googleReadOnly.mjs';
 import { createGoogleWorkspace } from '../src/lib/googleWorkspace.mjs';
 import { foldWorkspace } from '../src/lib/liveWorkRecords.mjs';
 import { JOIN_HEADERS } from '../src/lib/studentEntry.mjs';
+import { assignmentFileName, parseAssignmentFileName } from '../src/lib/assignmentFileNames.mjs';
 
 const mime = 'application/vnd.google-apps.spreadsheet';
 const deck = { slides: [{ objectId: 'page', pageElements: [{ shape: { text: { textElements: [{ textRun: { content: '기본 틀' } }] } } }, { image: {} }] }] };
 const roster = [{ number: 1, name: '김누리' }, { number: 4, name: '송명신' }];
 const assignmentInput = { className: '4학년 4반', name: '달 관찰', templateUrl: 'https://docs.google.com/presentation/d/template/edit', roster, keywordsText: '달, 위치\n달', shareSlides: true, jobId: 'assignment-job' };
+
+test('new assignment files use the G배움로그 name while old names remain readable', () => {
+  assert.equal(assignmentFileName('4학년 4반', '달 관찰'), 'G배움로그_과제_[4학년 4반]_[달 관찰]');
+  assert.deepEqual(parseAssignmentFileName('SlideSight_DB_[4학년 4반]_[달 관찰]'), { className: '4학년 4반', assignmentName: '달 관찰', legacy: true });
+  assert.deepEqual(parseAssignmentFileName('G배움로그_과제_[4학년 4반]_[달 관찰]'), { className: '4학년 4반', assignmentName: '달 관찰', legacy: false });
+});
 
 test('explicit keyword items remain intact through creation, reload, and resume', async () => {
   const { fetcher, state } = mockGoogle();
@@ -42,7 +49,7 @@ function mockGoogle() {
       const kind = q.match(/key='gbaeumStore' and value='([^']+)'/)?.[1];
       const source = q.match(/key='sourceSheet' and value='([^']+)'/)?.[1];
       const found = [...files.values()].filter((file) => (!q.includes('trashed = false') || !file.trashed) &&
-        (job ? file.appProperties?.gbaeumCreation === job : kind ? file.appProperties?.gbaeumStore === kind && (!source || file.appProperties?.sourceSheet === source) : q.includes('학급명단') ? file.name === 'G배움로그_학급명단_저장소' : file.name?.startsWith('SlideSight_DB_')));
+        (job ? file.appProperties?.gbaeumCreation === job : kind ? file.appProperties?.gbaeumStore === kind && (!source || file.appProperties?.sourceSheet === source) : q.includes('학급명단') ? file.name === 'G배움로그_학급명단_저장소' : Boolean(parseAssignmentFileName(file.name))));
       return response({ files: found });
     }
     if ((path === '/drive/v3/files' || path.endsWith('/copy')) && method === 'POST') {
@@ -139,6 +146,7 @@ test('assignment copies preserve template, exclude its baseline, save keywords, 
   assert.deepEqual(state.files.get('template'), original);
   assert.equal(state.sequence, 6); // DB, frozen template, two student copies, private settings, public picker.
   const sheet = state.files.get(created.assignment.id);
+  assert.equal(sheet.name, 'G배움로그_과제_[4학년 4반]_[달 관찰]');
   assert.equal(sheet.appProperties.setupStatus, 'ready');
   assert.ok(sheet.permissions.every((permission) => permission.role === 'owner'));
   const secondDevice = createGoogleReader('second-device', fetcher);

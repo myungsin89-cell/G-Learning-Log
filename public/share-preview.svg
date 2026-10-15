@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f8faf7"/>
+  <circle cx="1140" cy="-110" r="350" fill="#eef4ee"/>
+  <circle cx="-120" cy="690" r="270" fill="#f0f5ef"/>
+  <g transform="translate(72 66)">
+    <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+      <path d="M47.5 20C43.9 14.4 37.8 11 30.5 11C18.9 11 10.5 20.2 10.5 32S18.9 53 30.5 53C42.4 53 51 44.7 51 33H34" stroke="#246b55" stroke-width="5.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <text x="62" y="36" fill="#20342b" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="30" font-weight="700" letter-spacing="-1.5">G배움로그</text>
+  </g>
+  <rect x="72" y="172" width="44" height="3" rx="1.5" fill="#246b55"/>
+  <text x="72" y="234" fill="#246b55" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="25" font-weight="700">GOOGLE SLIDES CLASSROOM</text>
+  <text x="72" y="326" fill="#20342b" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="59" font-weight="700" letter-spacing="-2">학생의 작업 과정이</text>
+  <text x="72" y="410" fill="#20342b" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="59" font-weight="700" letter-spacing="-2">한눈에 보이도록</text>
+  <text x="74" y="490" fill="#6d7c72" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="27">작업 변화 · 댓글 · 피드백이 필요한 학생</text>
+  <path d="M835 474h248" stroke="#d5e4d8" stroke-width="2"/>
+  <rect x="822" y="200" width="257" height="222" rx="20" fill="#ffffff" stroke="#dce9df" stroke-width="2"/>
+  <rect x="848" y="227" width="205" height="14" rx="7" fill="#dce9df"/>
+  <rect x="848" y="264" width="130" height="9" rx="4.5" fill="#e9efea"/>
+  <rect x="848" y="310" width="44" height="80" rx="9" fill="#dce9df"/>
+  <rect x="902" y="282" width="44" height="108" rx="9" fill="#b6d1bf"/>
+  <rect x="956" y="257" width="44" height="133" rx="9" fill="#6da78c"/>
+  <rect x="1010" y="292" width="44" height="98" rx="9" fill="#246b55"/>
+  <circle cx="1070" cy="182" r="32" fill="#eaf3eb"/>
+  <path d="m1055 181 11 11 20-23" fill="none" stroke="#246b55" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="581" fill="#819087" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="19">baeumlog.chorok.app</text>
+</svg>

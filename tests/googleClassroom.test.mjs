@@ -36,6 +36,7 @@ function mockGoogle() {
     const response = (value, status = 200) => ({ ok: status < 400, status, json: async () => value });
     assert.ok(!(method !== 'GET' && (path === '/drive/v3/files/template' || path.includes('/spreadsheets/original-roster'))), 'Original files must not be changed');
     if (path === '/drive/v3/files' && method === 'GET') {
+      assert.notEqual(url.searchParams.get('pageToken'), 'undefined', 'An absent Drive page token must be omitted');
       const q = url.searchParams.get('q');
       const job = q.match(/key='gbaeumCreation' and value='([^']+)'/)?.[1];
       const kind = q.match(/key='gbaeumStore' and value='([^']+)'/)?.[1];
@@ -235,6 +236,33 @@ test('trashing an assignment moves every generated file and leaves the source te
   assert.equal(state.files.get('original-roster').trashed, undefined);
   assert.equal(state.calls.filter((call) => call.method === 'PATCH' && call.body.trashed).at(-1).path, `/drive/v3/files/${created.assignment.id}`);
   assert.deepEqual(await createGoogleReader('test', fetcher).listAssignments(assignmentInput.className), []);
+});
+
+test('an assignment stopped before student rows exist can be moved to trash', async () => {
+  for (const withEmptyTab of [false, true]) {
+    const { fetcher, state } = mockGoogle();
+    const id = 'unfinished-assignment', job = 'unfinished-job';
+    state.files.set(id, { id, name: 'SlideSight_DB_[4학년 4반]_[중단된 과제]', mimeType: mime, ownedByMe: true,
+      appProperties: { gbaeumStore: 'classroom-assignment-v2', gbaeumCreation: job, setupStatus: 'creating' },
+      tabs: withEmptyTab ? { Sheet1: [], students: [] } : { Sheet1: [] } });
+    state.files.set('unfinished-template', { id: 'unfinished-template', name: '중단된 과제 · 배부 원본',
+      mimeType: 'application/vnd.google-apps.presentation', ownedByMe: true,
+      appProperties: { gbaeumStore: 'assignment-template-v2', gbaeumCreation: `${job}:template` } });
+    const result = await createGoogleClassroom('test', fetcher).trashAssignment({ assignmentId: id, className: '4학년 4반' });
+    assert.deepEqual(result, { trashedCount: 2, assignmentTrashed: true });
+    assert.equal(state.files.get(id).trashed, true);
+    assert.equal(state.files.get('unfinished-template').trashed, true);
+    assert.equal(state.files.get('template').trashed, undefined);
+  }
+});
+
+test('unexpected student rows in an unfinished assignment still block trashing', async () => {
+  const { fetcher, state } = mockGoogle();
+  state.files.set('unfinished', { id: 'unfinished', name: 'SlideSight_DB_[4학년 4반]_[중단된 과제]', mimeType: mime, ownedByMe: true,
+    appProperties: { gbaeumStore: 'classroom-assignment-v2', gbaeumCreation: 'unfinished-job', setupStatus: 'creating' },
+    tabs: { students: [['unexpected', 'data']] } });
+  await assert.rejects(createGoogleClassroom('test', fetcher).trashAssignment({ assignmentId: 'unfinished', className: '4학년 4반' }), /학생 목록 형식/);
+  assert.equal(state.files.get('unfinished').trashed, undefined);
 });
 
 test('slides-only moves student copies while preserving the assignment card and all record files', async () => {

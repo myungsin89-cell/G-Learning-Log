@@ -25,7 +25,7 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
   async function request(service, path, { method = 'GET', body, params = [] } = {}) {
     const base = service === 'drive' ? 'https://www.googleapis.com/drive/v3/' : service === 'slides' ? 'https://slides.googleapis.com/v1/' : 'https://sheets.googleapis.com/v4/';
     const url = new URL(path, base);
-    for (const [key, value] of params) url.searchParams.append(key, value);
+    for (const [key, value] of params) if (value != null) url.searchParams.append(key, value);
     const response = await fetcher(url.toString(), { method, cache: 'no-store', headers: { Authorization: `Bearer ${accessToken}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     if (!response.ok) {
       const error = new Error(response.status === 401 ? '로그인이 만료됐습니다. 다시 로그인하고 재시도해 주세요.' : response.status === 403 ? 'Google 파일 생성·복사·공유 권한을 확인해 주세요. 학교 계정의 공유 정책에 따라 제한될 수 있습니다.' : 'Google 저장을 완료하지 못했습니다. 완료된 파일은 유지합니다. 다시 시도해 주세요.');
@@ -134,8 +134,15 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
             (index === 2 && job === `join:${assignmentId}`)) candidates.set(file.id, { kind: kinds[index], job });
       }
       for (const file of workspaces) if (file.appProperties?.sourceSheet === assignmentId) candidates.set(file.id, { kind: 'teacher-workspace-v2' });
-      const rows = await read(assignmentId, "'students'!A:P");
-      if (rows[0]?.[0] !== 'student_number' || rows[0]?.[1] !== 'student_name' || rows[0]?.[2] !== 'slide_id') throw new Error('과제의 학생 목록 형식을 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
+      const creating = managed && assignment.appProperties?.setupStatus === 'creating';
+      let hasStudentsTab = true;
+      if (creating) {
+        const metadata = await request('sheets', `spreadsheets/${encodeURIComponent(assignmentId)}`, { params: [['fields', 'sheets(properties(title))']] });
+        if (!Array.isArray(metadata.sheets)) throw new Error('과제의 시트 목록을 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
+        hasStudentsTab = metadata.sheets.some((sheet) => sheet.properties?.title === 'students');
+      }
+      const rows = hasStudentsTab ? await read(assignmentId, "'students'!A:P") : [];
+      if ((!creating || rows.length > 0) && (rows[0]?.[0] !== 'student_number' || rows[0]?.[1] !== 'student_name' || rows[0]?.[2] !== 'slide_id')) throw new Error('과제의 학생 목록 형식을 확인할 수 없어 휴지통으로 옮기지 않았습니다.');
       for (const row of rows.slice(1)) if (row[2] && !candidates.has(row[2])) candidates.set(row[2], managed ? { kind: 'student-copy-v2' } : { kind: 'legacy-student-copy', name: `[${row[0] ? `${row[0]}번 ` : ''}${row[1]}] SlideSight 과제` });
       if (scope === 'all') for (const [id, kind, job] of [[assignment.appProperties?.coverSlide, 'assignment-template-v2', `${creationId}:template`], [assignment.appProperties?.joinSheet, 'student-join-v2', `join:${assignmentId}`]]) {
         if (id && !candidates.has(id)) candidates.set(id, { kind, job });

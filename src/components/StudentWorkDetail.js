@@ -56,7 +56,7 @@ function SaveForm({ label, name, defaultValue = '', placeholder, onSave, reset =
   </form>;
 }
 
-export default function StudentWorkDetail({ student, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, slidesTrashed = false, workspaceError, commentsError, commentsLoaded = false, onRefreshComments, presentationState, onRefreshPresentation, templateBaseline, collection }) {
+export default function StudentWorkDetail({ student, keywords = [], matchedKeywords = [], keywordChecked = false, averages, mode, threads, unread, onFeedback, onReply, memo, onMemo, surge, reviewed, onReview, onReviewComment, readOnly = false, canWrite = false, canSaveMemo = false, slidesTrashed = false, workspaceError, commentsError, commentsLoaded = false, onRefreshComments, presentationState, onRefreshPresentation, templateBaseline, collection }) {
   const [replying, setReplying] = useState(null);
   const [commentBusy, setCommentBusy] = useState(false);
   const [reviewBusy, setReviewBusy] = useState(null);
@@ -65,6 +65,8 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
   const records = readOnly ? student.records : mode === 'lesson' ? student.lessonRecords : student.projectRecords;
   const hasLegacy = readOnly && records.some((record) => record.source === 'legacy_unverified');
   const latest = records.at(-1);
+  const keywordCheckedAt = student.currentCounts?.checkedAt || student.checkedAt;
+  const keywordSource = keywordCheckedAt ? `${formatCheckedAt(keywordCheckedAt)}에 확인한` : '저장된';
   const surgeSeconds = readOnly ? Math.round((Date.parse(latest?.checkedAt) - Date.parse(latest?.previousCheckedAt)) / 1000) : 25;
   const messageLabel = (message, reply = false) => message.role === 'teacher' ? reply ? '선생님 답글' : '선생님' : message.role === 'student' ? reply ? '학생 답글' : '학생 댓글' : message.authorName || '작성자 미확인';
   const canReplyTo = (thread) => writable && !collection?.paused && (!collection || collection.ready) && (!readOnly || thread.origin === 'google_slides');
@@ -94,6 +96,13 @@ export default function StudentWorkDetail({ student, averages, mode, threads, un
     </div><p className={styles.smallNote}>{readOnly ? `전체 글자는 템플릿을 포함한 분량입니다. 확인 시각: ${formatCheckedAt(student.currentCounts?.checkedAt || student.checkedAt)} · 미기록 값은 —로 표시` : '같은 과제의 전체 학생 기준 · 기본 글자·이미지 제외 · 슬라이드는 전체 장수'}</p></section>
 
     {student.amountVerified === false && <p className={styles.smallNote}>템플릿 분량이 확인되지 않아 추가량은 저장된 수치를 표시합니다.</p>}
+
+    <section className={styles.detailSection} aria-label="핵심 키워드 달성 현황"><div className={styles.panelHeading}><h3>핵심 키워드 달성 현황</h3>{keywords.length > 0 && <strong className={styles.keywordProgress}>{keywordChecked ? `${matchedKeywords.length} / ${keywords.length}` : '확인 전'}</strong>}</div>
+      {keywords.length > 0 ? <><ul className={styles.keywordProgressList}>{keywords.map((keyword) => {
+        const found = keywordChecked && matchedKeywords.includes(keyword);
+        return <li key={keyword} className={found ? styles.keywordFound : styles.keywordMissing}><span aria-hidden="true">{found ? '✓' : '○'}</span>{keyword}<small>{keywordChecked ? found ? '확인됨' : '미확인' : '확인 전'}</small></li>;
+      })}</ul><p className={styles.smallNote}>{keywordChecked ? `${keywordSource} 슬라이드의 키워드 포함 기록이에요. 키워드를 수정했다면 다음 작업 확인 때 갱신됩니다.` : '아직 학생 슬라이드의 키워드를 확인하지 않았어요. 모니터링을 시작하거나 현재 작업 확인을 누르면 갱신됩니다.'}</p></> : <p className={styles.smallNote}>이 과제에 등록된 핵심 키워드가 없어요. 과제 카드의 수정 또는 핵심 키워드 추가·수정에서 등록할 수 있습니다.</p>}
+    </section>
 
     <section className={styles.detailSection}><div className={styles.panelHeading}><h3>{hasLegacy && !records.some((record) => Number.isFinite(record.charDelta)) ? '최근 저장 기록' : '최근 변화'}</h3>{surge && <span className={styles.surgeFlag}>{reviewed ? '확인 완료' : '텍스트 급증 · 확인 필요'}</span>}</div>
       {surge && <div className={styles.surgeNotice}><p>{surgeSeconds}초 동안 글자 수가 {formatAmount(readOnly ? latest.charDelta : 286)}자 늘었습니다. 작성 맥락을 학생과 확인해 주세요.</p><small>붙여넣기를 확정하는 표시가 아니에요.</small>{writable && <button className={styles.textAction} onClick={onReview}>{reviewed ? '다시 확인 필요로 표시' : '확인 완료로 표시'}</button>}</div>}

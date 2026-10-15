@@ -155,6 +155,13 @@
 .largeChart { width: 100%; height: 160px; margin-top: 18px; }
 .chartTimes { display: flex; justify-content: space-between; color: #91a096; font-size: 10px; }
 .detailSection { margin-top: 26px; padding-top: 24px; border-top: 1px solid #e3eae3; } .detailSection h3 { font-size: 14px; font-weight: 730; }
+.keywordProgress { color: #246b55; font-size: 13px; font-variant-numeric: tabular-nums; }
+.keywordProgressList { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding: 0; list-style: none; }
+.keywordProgressList li { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 7px; font-size: 11px; font-weight: 650; }
+.keywordProgressList li span { font-size: 13px; }
+.keywordProgressList li small { font-size: 10px; font-weight: 500; }
+.keywordFound { background: #eaf5ee; color: #246b55; }
+.keywordMissing { background: #f1f3f0; color: #718075; }
 .activityList { list-style: none; margin-top: 12px; }
 .activityList li { display: flex; align-items: flex-start; gap: 14px; padding: 13px 0; border-bottom: 1px solid #edf1ec; font-size: 12px; line-height: 1.7; }
 .activityList time { color: #91a096; font-size: 10px; padding-top: 2px; } .activityList small { display: block; margin-top: 3px; color: #819087; font-size: 10px; }

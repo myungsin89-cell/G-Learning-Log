@@ -28,6 +28,17 @@ test('existing net amounts and attendance numbers survive without generating his
   assert.equal(data.threads[student.id][0].role, 'unknown');
 });
 
+test('assignment keywords remain visible when students have used only some or none of them', () => {
+  const original = input();
+  original.assignment.keywords = ['달', '그림자'];
+  const data = adaptStoredAssignment(original);
+  assert.deepEqual(data.keywords, ['달', '그림자']);
+  assert.deepEqual(data.assignment.keywords, ['달', '그림자']);
+  assert.deepEqual(data.students[0].keywordsUsed, ['달']);
+  original.assignment.keywords = [];
+  assert.deepEqual(adaptStoredAssignment(original).keywords, []);
+});
+
 test('student cards expose restored history even when net chars are zero and a new first snapshot exists', () => {
   const student = adaptStoredAssignment(input()).students[0];
   student.chars = 0;

@@ -110,7 +110,7 @@ export function adaptStoredAssignment({ className, assignment, studentRows, logR
       keywordsUsed: String(row[10] || '').split(',').map((word) => word.trim()).filter(Boolean),
       checkedAt, lastActiveAt: stamp(row[5]), status, records: sorted, storedFeedback: row[13] || '', raw: [...row] };
   }).filter(Boolean);
-  const keywords = [...new Set(students.flatMap((student) => student.keywordsUsed))];
+  const keywords = Array.isArray(assignment.keywords) ? assignment.keywords : [...new Set(students.flatMap((student) => student.keywordsUsed))];
   const threads = Object.fromEntries(students.map((student) => [student.id, student.storedFeedback ? [{
     id: `${student.id}-stored-feedback`, role: 'unknown', origin: 'stored_feedback', content: student.storedFeedback,
     createdAt: null, replies: [],

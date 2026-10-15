@@ -190,6 +190,41 @@ test('partial distribution resumes from a saved plan without duplicating success
   assert.equal(created.students.length, 2); assert.equal(state.sequence, 6);
 });
 
+test('student slides are distributed three at a time and returned in roster order', async () => {
+  const { fetcher, state } = mockGoogle();
+  const many = Array.from({ length: 6 }, (_, index) => ({ number: index + 1, name: `학생${index + 1}` }));
+  let activeCopies = 0, mostActive = 0;
+  const delayed = async (address, options) => {
+    const body = options.body ? JSON.parse(options.body) : null;
+    if (options.method === 'POST' && new URL(address).pathname.endsWith('/copy') && body.appProperties?.gbaeumStore === 'student-copy-v2') {
+      activeCopies++;
+      mostActive = Math.max(mostActive, activeCopies);
+      await new Promise((resolve) => setTimeout(resolve, body.appProperties.gbaeumCreation.endsWith(':1') ? 15 : 5));
+      activeCopies--;
+    }
+    return fetcher(address, options);
+  };
+  const updates = [];
+  const result = await createGoogleClassroom('test', delayed).createAssignment({ ...assignmentInput, roster: many, onProgress: (_, detail) => updates.push(detail) });
+  assert.equal(mostActive, 3);
+  assert.deepEqual(result.students.map((student) => student.number), many.map((student) => student.number));
+  assert.deepEqual([...new Set(updates.filter((update) => update.completed > 0).map((update) => update.completed))], [1, 2, 3, 4, 5, 6]);
+  const sheet = state.files.get(result.assignment.id);
+  assert.deepEqual(sheet.tabs.students.slice(1).map((row) => row[2]), result.students.map((student) => student.slideId));
+});
+
+test('a parallel copy failure finishes in-flight writes and resumes without duplicate slides', async () => {
+  const { fetcher, state } = mockGoogle(); state.failStudent = 'assignment-job:2';
+  const many = Array.from({ length: 5 }, (_, index) => ({ number: index + 1, name: `학생${index + 1}` }));
+  const api = createGoogleClassroom('test', fetcher);
+  await assert.rejects(api.createAssignment({ ...assignmentInput, roster: many }));
+  const before = new Map([...state.files.values()].filter((file) => file.appProperties?.gbaeumStore === 'student-copy-v2').map((file) => [file.appProperties.gbaeumCreation, file.id]));
+  const result = await api.createAssignment({ ...assignmentInput, roster: many });
+  assert.equal(result.students.length, many.length);
+  for (const [job, id] of before) assert.equal([...state.files.values()].find((file) => file.appProperties?.gbaeumCreation === job).id, id);
+  assert.equal([...state.files.values()].filter((file) => file.appProperties?.gbaeumStore === 'student-copy-v2').length, many.length);
+});
+
 test('trashing an assignment moves every generated file and leaves the source template and class roster intact', async () => {
   const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
   const created = await api.createAssignment(assignmentInput);
@@ -303,7 +338,7 @@ test('creation progress counts students only after their slide link is saved and
     updates.push({ message, ...detail });
     if (detail.completed > 0) {
       const sheet = [...state.files.values()].find((file) => file.appProperties?.gbaeumCreation === assignmentInput.jobId);
-      assert.ok(sheet.tabs.students[detail.completed][2], 'A completed student must have a persisted slide link');
+      assert.ok(sheet.tabs.students.slice(1).filter((row) => row?.[2]).length >= detail.completed, 'Completed count follows persisted slide links');
     }
     if (detail.percent === 100) {
       assert.equal(state.calls.at(-1).method, 'PATCH');

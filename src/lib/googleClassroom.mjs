@@ -240,10 +240,17 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       if (logs.length && JSON.stringify(logs[0]) !== JSON.stringify(logHeaders)) throw new Error('새 과제의 기록 탭 형식이 달라 변경하지 않았습니다.');
       if (!logs.length) await write(file.id, "'activity_logs'!A1:M2", [logHeaders, ['SYSTEM_BASELINE', baseline.checkedAt, baseline.charCount, baseline.slideCount, baseline.imageCount, 0, 'TEMPLATE_BASELINE']]);
       report('학생 슬라이드 생성 준비를 마쳤어요.', 20);
-      const savedStudents = [], warnings = [];
-      for (let index = 0; index < students.length; index++) {
+      const savedStudents = Array(students.length), warnings = [];
+      let nextIndex = 0, completed = 0, failure = null;
+      async function distribute() {
+        while (nextIndex < students.length && !failure) {
+          const index = nextIndex++;
+          try { await distributeOne(index); }
+          catch (error) { failure ||= error; }
+        }
+      }
+      async function distributeOne(index) {
         const student = students[index];
-        report(`${student.number}번 ${student.name} 슬라이드 만드는 중…`, 20 + Math.floor(index / students.length * 65), index);
         const copyJob = `${jobId}:${student.number}`;
         const copy = await ensureFile(copyJob, `[${student.number}번 ${student.name}] ${name}`, 'student-copy-v2', frozen.id);
         await assertJob(copy.id, copyJob, 'student-copy-v2');
@@ -260,9 +267,13 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
         if (Number(row[0]) !== student.number || row[1] !== student.name || (row[2] && row[2] !== copy.id)) throw new Error('학생 연결 정보가 달라 기존 값을 유지하고 중단했습니다.');
         row[2] = copy.id; row[3] = slideUrl; row[15] = shared;
         await write(file.id, `'students'!A${index + 2}:P${index + 2}`, [row]);
-        savedStudents.push({ ...student, slideId: copy.id, slideUrl });
-        report(`${student.number}번 ${student.name} 슬라이드를 만들었어요.`, 20 + Math.floor((index + 1) / students.length * 65), index + 1);
+        savedStudents[index] = { ...student, slideId: copy.id, slideUrl };
+        completed++;
+        report(`${student.number}번 ${student.name} 슬라이드를 만들었어요.`, 20 + Math.floor(completed / students.length * 65), completed);
       }
+      report('학생 슬라이드를 만드는 중…', 20);
+      await Promise.all(Array.from({ length: Math.min(3, students.length) }, () => distribute()));
+      if (failure) throw failure;
       report('핵심 키워드와 과제 설정 저장 중…', 85, students.length);
       const assignment = { id: file.id, name, creationId: jobId };
       const workspace = createGoogleWorkspace(accessToken, assignment, savedStudents, fetcher);

@@ -4,6 +4,7 @@ import { createGoogleWorkspace } from './googleWorkspace.mjs';
 import { foldWorkspace } from './liveWorkRecords.mjs';
 import { JOIN_HEADERS } from './studentEntry.mjs';
 import { assertRosterConfirmation, ROSTER_NOTICE_VERSION } from './classroomPrivacy.mjs';
+import { filePermissions } from './drivePrivacy.mjs';
 
 const studentHeaders = ['student_number', 'student_name', 'slide_id', 'slide_url', 'status', 'last_active_at', 'current_char_count', 'current_slide_count', 'image_count', 'keyword_count', 'keywords_used', 'blank_slide_count', 'focus_ratio', 'teacher_feedback', 'last_checked_at', 'share_status'];
 const logHeaders = ['student_name', 'timestamp', 'char_count', 'slide_count', 'image_count', 'keyword_count', 'copied_text', 'record_source', 'previous_checked_at', 'student_number', 'char_delta', 'image_delta', 'slide_delta'];
@@ -49,7 +50,12 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     const file = await request('drive', `files/${encodeURIComponent(fileId)}`, { params: [['fields', 'id,mimeType,ownedByMe,appProperties,permissions(type,role)']] });
     if (!file.ownedByMe || file.appProperties?.gbaeumCreation !== jobId || file.appProperties?.gbaeumStore !== kind) throw new Error('이번에 생성한 파일인지 확인하지 못해 변경하지 않았습니다.');
     const approved = (permission) => (permission.type === 'user' && permission.role === 'owner') || (kind === 'student-join-v2' && permission.type === 'anyone' && permission.role === 'reader');
-    if (kind !== 'student-copy-v2' && (!file.permissions?.length || file.permissions.some((permission) => !approved(permission)))) throw new Error('명단과 교사 기록은 비공개 시트에만 저장할 수 있습니다.');
+    if (kind !== 'student-copy-v2') {
+      const permissions = await filePermissions(file, () => request('drive', `files/${encodeURIComponent(fileId)}/permissions`, { params: [['fields', 'permissions(type,role)']] }));
+      if (!permissions.length || permissions.some((permission) => !approved(permission))) {
+        throw new Error(kind === 'assignment-template-v2' ? '배부 원본 슬라이드의 비공개 상태를 확인할 수 없습니다. Google Drive에서 공유 설정을 확인해 주세요.' : '명단과 교사 기록은 비공개 시트에만 저장할 수 있습니다. 생성된 파일의 공유 설정을 확인해 주세요.');
+      }
+    }
     return file;
   }
   async function tabs(fileId, names) {

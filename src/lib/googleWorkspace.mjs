@@ -1,5 +1,6 @@
 import { EVENT_HEADERS, eventRow, parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
 import { adaptDriveComments } from './storedWorkRecords.mjs';
+import { filePermissions } from './drivePrivacy.mjs';
 
 export const WORKSPACE_SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const mimeType = 'application/vnd.google-apps.spreadsheet';
@@ -26,7 +27,9 @@ export function createGoogleWorkspace(accessToken, assignment, students, fetcher
   async function assertPrivate() {
     if (!storeId || storeId === assignment.id || allowedSlides.has(storeId)) throw new Error('원본 자료에는 기록을 저장할 수 없습니다.');
     const file = await request('drive', `files/${encodeURIComponent(storeId)}`, { params: [['fields', fields]] });
-    if (file.mimeType !== mimeType || !file.ownedByMe || file.appProperties?.gbaeumStore !== marker || file.appProperties?.sourceSheet !== assignment.id || !file.permissions?.length || file.permissions.some((permission) => permission.role !== 'owner' || permission.type !== 'user')) throw new Error('교사 기록 저장소가 비공개 소유 파일인지 확인할 수 없습니다. 공유 설정을 변경하지 않았으며 저장을 중단했습니다.');
+    if (file.mimeType !== mimeType || !file.ownedByMe || file.appProperties?.gbaeumStore !== marker || file.appProperties?.sourceSheet !== assignment.id) throw new Error('교사 기록 저장소가 비공개 소유 파일인지 확인할 수 없습니다. 공유 설정을 변경하지 않았으며 저장을 중단했습니다.');
+    const permissions = await filePermissions(file, () => request('drive', `files/${encodeURIComponent(storeId)}/permissions`, { params: [['fields', 'permissions(type,role)']] }));
+    if (!permissions.length || permissions.some((permission) => permission.role !== 'owner' || permission.type !== 'user')) throw new Error('교사 기록 저장소가 비공개 소유 파일인지 확인할 수 없습니다. 공유 설정을 변경하지 않았으며 저장을 중단했습니다.');
   }
   async function readEvents() {
     const values = await request('sheets', `spreadsheets/${encodeURIComponent(storeId)}/values/${encodeURIComponent("'events'!A:F")}`);
@@ -45,7 +48,7 @@ export function createGoogleWorkspace(accessToken, assignment, students, fetcher
         if (files.length > 1) throw new Error('이 과제의 교사 저장소가 여러 개입니다. 파일을 합치거나 덮어쓰지 않았습니다.');
         if (files.length) storeId = files[0].id;
         else {
-          const file = await request('drive', 'files', { method: 'POST', params: [['fields', 'id']], body: { name: `G배움로그_새기록_[${assignment.id}]`, mimeType, appProperties: { gbaeumStore: marker, sourceSheet: assignment.id }, description: `${assignment.name} · 교사 비공개 작업기록과 메모. 학생에게 공유하지 마세요.` } });
+          const file = await request('drive', 'files', { method: 'POST', params: [['fields', 'id'], ['ignoreDefaultVisibility', 'true']], body: { name: `G배움로그_새기록_[${assignment.id}]`, mimeType, appProperties: { gbaeumStore: marker, sourceSheet: assignment.id }, description: `${assignment.name} · 교사 비공개 작업기록과 메모. 학생에게 공유하지 마세요.` } });
           storeId = file.id;
         }
         await assertPrivate();

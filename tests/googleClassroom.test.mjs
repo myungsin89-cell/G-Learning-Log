@@ -28,7 +28,7 @@ test('explicit keyword items remain intact through creation, reload, and resume'
 
 function mockGoogle() {
   const files = new Map([['original-roster', { id: 'original-roster', name: 'G배움로그_학급명단_저장소', mimeType: mime, ownedByMe: true, permissions: [{ type: 'user', role: 'owner' }], appProperties: {}, tabs: { '기존 반': [['number', 'name'], [9, '원래 학생']] } }], ['template', { id: 'template', mimeType: 'application/vnd.google-apps.presentation', capabilities: { canCopy: true }, deck }]]);
-  const state = { files, calls: [], sequence: 0, lostCopy: false, failStudent: null, failTrashId: null, sharingFails: false };
+  const state = { files, calls: [], sequence: 0, lostCopy: false, failStudent: null, failTrashId: null, sharingFails: false, omitInlinePermissions: false, shareNewAssignment: false };
   const fetcher = async (address, options) => {
     const url = new URL(address), path = decodeURIComponent(url.pathname), method = options.method;
     const body = options.body ? JSON.parse(options.body) : null;
@@ -48,6 +48,7 @@ function mockGoogle() {
       if (body.appProperties?.gbaeumCreation === state.failStudent) { state.failStudent = null; return response({}, 500); }
       const source = path.endsWith('/copy') ? files.get(path.split('/')[4]) : null;
       const file = { id: `new-${++state.sequence}`, name: body.name, mimeType: source?.mimeType || body.mimeType, ownedByMe: true, permissions: [{ type: 'user', role: 'owner' }], appProperties: body.appProperties, tabs: source ? {} : { Sheet1: [] }, ...(source ? { deck: structuredClone(source.deck) } : {}) };
+      if (state.shareNewAssignment && body.appProperties?.gbaeumStore === 'classroom-assignment-v2') file.permissions.push({ type: 'anyone', role: 'reader' });
       files.set(file.id, file);
       if (state.lostCopy && body.appProperties?.gbaeumStore === 'student-copy-v2') { state.lostCopy = false; throw new Error('Lost copy response'); }
       return response(file);
@@ -65,7 +66,7 @@ function mockGoogle() {
         if (body.trashed !== undefined) file.trashed = body.trashed;
         return response(file);
       }
-      return response(file);
+      return response(state.omitInlinePermissions && method === 'GET' ? { ...file, permissions: undefined } : file);
     }
     const slideId = path.match(/^\/v1\/presentations\/([^/]+)$/)?.[1];
     if (slideId) return response(files.get(slideId).deck);
@@ -147,6 +148,21 @@ test('assignment copies preserve template, exclude its baseline, save keywords, 
   await api.createAssignment(assignmentInput);
   assert.equal(state.sequence, 6); assert.equal(sheet.tabs.students[1][6], 200); assert.equal(sheet.tabs.students[1][13], '보존할 피드백');
   assert.equal(sheet.tabs.activity_logs.length, 2);
+});
+
+test('creation verifies omitted file permissions through the permissions endpoint', async () => {
+  const { fetcher, state } = mockGoogle(); state.omitInlinePermissions = true;
+  const created = await createGoogleClassroom('test', fetcher).createAssignment(assignmentInput);
+  assert.equal(created.students.length, 2);
+  assert.ok(state.calls.some((call) => call.path === `/drive/v3/files/${created.assignment.id}/permissions`));
+  assert.equal((await createGoogleReader('test', fetcher).loadWorkspace(created.assignment.id)).events.length > 0, true);
+});
+
+test('a shared assignment sheet is rejected even when file permissions are omitted', async () => {
+  const { fetcher, state } = mockGoogle(); state.omitInlinePermissions = true; state.shareNewAssignment = true;
+  await assert.rejects(createGoogleClassroom('test', fetcher).createAssignment(assignmentInput), /비공개 시트/);
+  assert.equal(state.sequence, 1);
+  assert.ok(!state.calls.some((call) => call.path.startsWith('/v4/spreadsheets/new-1')));
 });
 
 test('partial distribution resumes from a saved plan without duplicating successful copies', async () => {

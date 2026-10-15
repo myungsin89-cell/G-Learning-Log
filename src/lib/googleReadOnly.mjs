@@ -1,6 +1,7 @@
 import { adaptStoredAssignment, adaptDriveComments } from './storedWorkRecords.mjs';
 import { adaptPresentation, parsePresentationId } from './slideContents.mjs';
 import { parseWorkspaceEvents, foldWorkspace } from './liveWorkRecords.mjs';
+import { filePermissions } from './drivePrivacy.mjs';
 
 // This module deliberately has no dependency on the legacy writer or gapi token.
 export const READ_ONLY_SCOPES = [
@@ -48,7 +49,9 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       if (found.length > 1) throw new Error('교사 저장소가 여러 개라 자동으로 선택하지 않았습니다.');
       if (!found.length) return null;
       const info = found[0];
-      if (!info.ownedByMe || !info.permissions?.length || info.permissions.some((permission) => permission.role !== 'owner' || permission.type !== 'user')) throw new Error('교사 저장소가 비공개 파일인지 확인할 수 없어 메모를 불러오지 않았습니다.');
+      if (!info.ownedByMe) throw new Error('교사 저장소가 비공개 파일인지 확인할 수 없어 메모를 불러오지 않았습니다.');
+      const permissions = await filePermissions(info, () => get('drive', `files/${encodeURIComponent(info.id)}/permissions`, [['fields', 'permissions(type,role)']]));
+      if (!permissions.length || permissions.some((permission) => permission.role !== 'owner' || permission.type !== 'user')) throw new Error('교사 저장소가 비공개 파일인지 확인할 수 없어 메모를 불러오지 않았습니다.');
       const data = await get('sheets', `spreadsheets/${encodeURIComponent(info.id)}/values/${encodeURIComponent("'events'!A:F")}`);
       if (!data.values?.length) throw new Error('교사 기록 저장소의 헤더가 없습니다. 저장된 메모와 기록을 확인할 수 없어 불러오기를 중단했습니다.');
       return { storeId: info.id, ...parseWorkspaceEvents(data.values || []) };

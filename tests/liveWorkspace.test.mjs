@@ -9,7 +9,7 @@ const student = { id: 'row-2', slideId: 'student-slide', number: 4, name: '학�
 const observation = (time, chars = 400) => ({ checkedAt: time, charCount: chars, imageCount: 3, slideCount: 4, pages: [{ id: 'page', number: 1, text: '달 관찰', notes: '', chars, images: 3 }] });
 const event = (id, type, payload, key = 'slide:student-slide') => ({ id, type, studentId: key, createdAt: '2026-10-09T01:00:00Z', payload });
 
-function mockGoogle({ existing = false, shared = false, badHeader = false, lostResponse = false } = {}) {
+function mockGoogle({ existing = false, shared = false, badHeader = false, lostResponse = false, omitInlinePermissions = false } = {}) {
   const state = { created: existing, hasTab: existing, rows: existing ? [badHeader ? ['custom_notes'] : [...EVENT_HEADERS]] : [], calls: [], appendCount: 0, lostResponse };
   const file = () => ({ id: 'private-store', mimeType: 'application/vnd.google-apps.spreadsheet', ownedByMe: true, appProperties: { gbaeumStore: 'teacher-workspace-v2', sourceSheet: 'source-sheet' }, permissions: [{ type: 'user', role: 'owner' }, ...(shared ? [{ type: 'anyone', role: 'reader' }] : [])] });
   const fetcher = async (url, options) => {
@@ -18,8 +18,9 @@ function mockGoogle({ existing = false, shared = false, badHeader = false, lostR
     if (path.includes('/spreadsheets/source-sheet') && options.method !== 'GET') assert.fail('Original assignment must not be written');
     let result;
     if (path === '/drive/v3/files' && options.method === 'GET') result = { files: state.created ? [file()] : [] };
-    else if (path === '/drive/v3/files' && options.method === 'POST') { state.created = true; result = { id: 'private-store' }; assert.equal(body.appProperties.sourceSheet, assignment.id); }
-    else if (path === '/drive/v3/files/private-store') result = file();
+    else if (path === '/drive/v3/files' && options.method === 'POST') { state.created = true; result = { id: 'private-store' }; assert.equal(body.appProperties.sourceSheet, assignment.id); assert.equal(parsed.searchParams.get('ignoreDefaultVisibility'), 'true'); }
+    else if (path === '/drive/v3/files/private-store') result = omitInlinePermissions ? { ...file(), permissions: undefined } : file();
+    else if (path === '/drive/v3/files/private-store/permissions') result = { permissions: file().permissions };
     else if (path === '/v4/spreadsheets/private-store') result = { sheets: [{ properties: { title: state.hasTab ? 'events' : 'Sheet1' } }] };
     else if (path === '/v4/spreadsheets/private-store:batchUpdate') { state.hasTab = true; result = {}; }
     else if (path.endsWith(':append')) {
@@ -123,6 +124,14 @@ test('private store initialization and appends never write the original sheet', 
   const result = await api.append([event('memo', 'memo', { text: '=수식을 실행하지 않는 메모' })]);
   assert.equal(result.events.length, 1); assert.equal((await api.load()).events[0].payload.text, '=수식을 실행하지 않는 메모');
   assert.ok(!state.calls.some((call) => call.path.includes('permissions') || call.method === 'DELETE'));
+});
+
+test('private store uses a separate permissions lookup when file metadata omits the list', async () => {
+  const privateStore = mockGoogle({ omitInlinePermissions: true });
+  assert.equal((await createGoogleWorkspace('token', assignment, [student], privateStore.fetcher).initialize()).storeId, 'private-store');
+  assert.ok(privateStore.state.calls.some((call) => call.path === '/drive/v3/files/private-store/permissions'));
+  const sharedStore = mockGoogle({ omitInlinePermissions: true, shared: true });
+  await assert.rejects(createGoogleWorkspace('token', assignment, [student], sharedStore.fetcher).initialize(), /비공개 소유 파일/);
 });
 
 test('a queued snapshot is filtered after stop, while private pause controls persist and other students keep recording', async () => {

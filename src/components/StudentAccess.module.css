@@ -24,10 +24,15 @@
 .prepare p { margin: 17px 0 20px; color: #718277; font-size: 13px; line-height: 1.8; }
 .description { color: #718277; font-size: 13px; line-height: 1.7; }
 .list { margin-top: 18px; max-height: 380px; overflow: auto; }
-.list > div { display: flex; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid #edf1ec; font-size: 13px; }
-.list > div > span { flex: 1; min-width: 0; }
+.list > div { display: flex; flex-wrap: wrap; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid #edf1ec; font-size: 13px; }
+.list > div > span { flex: 1 1 180px; min-width: 0; }
 .list small { display: block; margin-top: 4px; color: #856239; font-size: 11px; line-height: 1.7; }
 .list button, .list a, .preference { border: 0; padding: 0; background: none; color: #39735a; font: inherit; font-size: 12px; text-decoration: none; cursor: pointer; }
+.individualQr { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding: 18px; border: 1px solid #dfe7de; border-radius: 10px; background: #f8faf7; }
+.individualQr strong { align-self: stretch; color: #20342b; font-size: 13px; }
+.individualQr img { width: min(280px,100%); height: auto; background: #fff; }
+.individualQr a { color: #246b55; font-size: 12px; font-weight: 700; text-decoration: none; }
+.individualQr p { color: #718277; font-size: 12px; }
 .preference { display: block; margin: 22px 0 0; text-decoration: underline; }
 .message, .error, .localNote { margin-top: 18px; color: #39735a; font-size: 12px; line-height: 1.8; }
 .error, .localNote { color: #856239; }

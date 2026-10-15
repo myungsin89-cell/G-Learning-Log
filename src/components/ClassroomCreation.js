@@ -54,11 +54,16 @@ export default function ClassroomCreation({ kind, className, roster = [], existi
   async function chooseTemplate() {
     if (!onPickTemplate || pickingTemplate) return;
     setPickingTemplate(true); setError('');
+    const element = dialog.current;
+    element?.close();
     try {
       const selectedFile = await onPickTemplate();
       if (selectedFile) setTemplate(selectedFile);
     } catch (err) { setError(err.message); }
-    finally { setPickingTemplate(false); }
+    finally {
+      if (element?.isConnected && !element.open) element.showModal();
+      setPickingTemplate(false);
+    }
   }
   const close = () => { if (!busy) onClose(); };
   return <><dialog ref={dialog} className={`${styles.dialog} ${real.dialog}`} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>

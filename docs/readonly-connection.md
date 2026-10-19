@@ -12,15 +12,15 @@
 
 ## Google 설정
 
-운영 프로젝트 ID는 `slidesight-505503`이다. 운영 설정과 개발 설정을 분리한다. 운영 OAuth 클라이언트와 Picker 브라우저 키는 `https://baeumlog.chorok.app`만 허용하고, localhost·127.0.0.1·Vercel 기본 도메인·이전 개발 원본은 제거한다. 로컬 개발은 별도 Google Cloud 프로젝트와 별도 OAuth 클라이언트를 사용한다.
+운영 프로젝트 ID는 `slidesight-505503`이다. 운영 설정과 개발 설정을 분리한다. 운영 OAuth 클라이언트와 Picker 브라우저 키는 `https://baeumlog.chorok.app`와 `https://g-learning-log-next.vercel.app`을 허용하고, localhost·127.0.0.1·이전 개발 원본은 제거한다. 로컬 개발은 별도 Google Cloud 프로젝트와 별도 OAuth 클라이언트를 사용한다.
 
 테스트용 프로젝트에는 다음을 준비한다.
 
 1. Drive API, Sheets API, Slides API 활성화
 2. OAuth 앱 정보와 대상 설정, 외부 앱의 테스트 사용자는 기존 자료를 보유한 교사 Google 계정
 3. 웹 애플리케이션 OAuth 클라이언트 생성
-4. 승인된 JavaScript 원본: `https://baeumlog.chorok.app`. 경로는 입력하지 않는다.
-5. Picker API를 활성화하고 브라우저 키를 Drive API와 Picker API로 제한한다. 웹사이트 제한에는 `https://baeumlog.chorok.app/*`와 Picker iframe용 `https://docs.google.com/*`를 등록한다.
+4. 승인된 JavaScript 원본: `https://baeumlog.chorok.app`, `https://g-learning-log-next.vercel.app`. 경로는 입력하지 않는다.
+5. Picker API를 활성화하고 브라우저 키를 Drive API와 Picker API로 제한한다. 웹사이트 제한에는 두 운영 주소의 `/*`와 Picker iframe용 `https://docs.google.com/*`를 등록한다.
 6. Google 로그인 → 기존 자료 가져오기 또는 예시 슬라이드 선택 → 새 파일 생성·기록 저장을 실제 계정으로 확인한다.
 
 현재는 GIS 팝업 토큰 모델이다. 서버용 client secret이나 리다이렉트 콜백을 추가하지 않는다. 인증정보 생성과 실제 권한 동의는 계정 소유자의 승인/진행이 필요하다.

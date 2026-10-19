@@ -11,17 +11,22 @@ import styles from './StudentAccess.module.css';
 const subscribeOrigin = () => () => {};
 const currentOrigin = () => window.location.origin;
 const serverOrigin = () => '';
+const CHOROK_ORIGIN = 'https://baeumlog.chorok.app';
+const VERCEL_ORIGIN = 'https://g-learning-log-next.vercel.app';
 
 export default function StudentAccess({ className, assignment, students, entry, onConfigure, onClose, preview = false }) {
   const dialog = useRef(null), inFlight = useRef(false), titleId = useId();
   const [choice, setChoice] = useState(null), [updated, setUpdated] = useState(null), [large, setLarge] = useState(false);
+  const [shareOrigin, setShareOrigin] = useState(VERCEL_ORIGIN);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [qr, setQr] = useState(null);
   const [selectedQr, setSelectedQr] = useState(null), [individualQr, setIndividualQr] = useState(null), [pdfBusy, setPdfBusy] = useState(false);
   const activeEntry = updated || entry, mode = choice || activeEntry?.mode || 'shared';
   const linkedStudents = students.filter((student) => student.slideUrl);
   const origin = useSyncExternalStore(subscribeOrigin, currentOrigin, serverOrigin);
-  const link = !origin ? '' : preview ? `${origin}/design-preview/student` : activeEntry?.id ? studentEntryUrl(origin, activeEntry.id) : '';
+  const hasShareDomains = !preview && [CHOROK_ORIGIN, VERCEL_ORIGIN].includes(origin);
+  const linkOrigin = hasShareDomains ? shareOrigin : origin;
+  const link = !origin ? '' : preview ? `${origin}/design-preview/student` : activeEntry?.id ? studentEntryUrl(linkOrigin, activeEntry.id) : '';
   const qrUrl = qr?.link === link ? qr.url : '';
   const individualQrUrl = individualQr?.link === selectedQr?.link ? individualQr?.url : '';
   const local = link && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(link).hostname);
@@ -73,6 +78,7 @@ export default function StudentAccess({ className, assignment, students, entry, 
     <div className={styles.body}>{preview && <p className={styles.localNote}>디자인 시안 · QR은 예시 학생 화면으로 연결됩니다.</p>}
       {mode === 'shared' ? <>
         {!large && <p className={styles.description}>공통 링크 소지자는 학생 목록과 슬라이드 연결 정보를 볼 수 있습니다. 이름 선택은 본인인증이 아니며, 가명을 사용할 수 있습니다.</p>}
+        {link && hasShareDomains && !large && <div className={styles.shareDomains} role="group" aria-label="학생 링크 주소"><span>학생 링크 주소</span><button className={shareOrigin === VERCEL_ORIGIN ? styles.selectedDomain : ''} aria-pressed={shareOrigin === VERCEL_ORIGIN} onClick={() => setShareOrigin(VERCEL_ORIGIN)}>Vercel 주소</button><button className={shareOrigin === CHOROK_ORIGIN ? styles.selectedDomain : ''} aria-pressed={shareOrigin === CHOROK_ORIGIN} onClick={() => setShareOrigin(CHOROK_ORIGIN)}>초록 주소</button></div>}
         {link ? <div className={styles.common}><div className={styles.qr}>{qrUrl ? <Image src={qrUrl} width={1000} height={1000} unoptimized alt="학생 공통 접속 QR코드" /> : <p>QR코드 만드는 중…</p>}</div><div className={styles.instructions}><h3>QR코드를 찍고<br />내 이름을 선택하세요.</h3><p>자신의 슬라이드에서 작업을 시작해요.</p><a className={styles.url} href={link} target="_blank" rel="noopener noreferrer">{link}</a></div></div> : <div className={styles.prepare}><strong>하나의 링크로 학급 전체가 접속해요.</strong><p>학생 명단과 슬라이드 연결 정보를 담은 접속 화면을 만듭니다.<br />공통 링크를 가진 학생은 목록에서 자기 이름을 선택합니다.</p>{onConfigure && <button className={styles.primary} onClick={configure} disabled={busy}>{busy ? '학생 접속 링크 만드는 중…' : '공통 학생 링크 만들기'}</button>}</div>}
         {local && !preview && <p className={styles.localNote}>현재 QR은 개발용 localhost 주소입니다. 학생 기기에서 사용할 링크와 QR은 배포한 주소에서 생성해 주세요.</p>}
         {link && <div className={styles.actions}><button onClick={() => copy(link)}>학생 링크 복사</button><a href={link} target="_blank" rel="noopener noreferrer">접속 화면 확인 ↗</a>{qrUrl && <a href={qrUrl} download={`${assignment.name}_학생접속_QR.png`}>QR 다운로드</a>}<button className={styles.primary} onClick={() => setLarge((value) => !value)}>{large ? '작게 보기' : '크게 보기'}</button></div>}

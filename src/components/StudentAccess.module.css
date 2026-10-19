@@ -23,6 +23,10 @@
 .prepare strong { font-size: 20px; }
 .prepare p { margin: 17px 0 20px; color: #718277; font-size: 13px; line-height: 1.8; }
 .description { color: #718277; font-size: 13px; line-height: 1.7; }
+.shareDomains { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 17px 0; font-size: 12px; }
+.shareDomains span { margin-right: 4px; color: #496654; font-weight: 700; }
+.shareDomains button { padding: 8px 12px; border: 1px solid #dfe7de; border-radius: 8px; background: #fff; color: #496654; font: inherit; cursor: pointer; }
+.shareDomains .selectedDomain { border-color: #246b55; background: #edf6f0; color: #246b55; font-weight: 700; }
 .list { margin-top: 18px; max-height: 380px; overflow: auto; }
 .list > div { display: flex; flex-wrap: wrap; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid #edf1ec; font-size: 13px; }
 .list > div > span { flex: 1 1 180px; min-width: 0; }

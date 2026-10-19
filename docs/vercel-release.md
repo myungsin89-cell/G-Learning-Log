@@ -5,6 +5,7 @@
 - Vercel 프로젝트: `g-learning-log-next`
 - 운영 브랜치: `release/next-version-2026-10-09`
 - 운영 원본: `https://baeumlog.chorok.app`
+- 학생 링크 대체 주소 및 교사 접속: `https://g-learning-log-next.vercel.app`
 - 개인정보처리방침: `https://baeumlog.chorok.app/privacy`
 - 이용 안내: `https://baeumlog.chorok.app/terms`
 
@@ -21,7 +22,7 @@
 
 ## Google 연결과 인증 준비
 
-현재 운영 버전은 GIS `initTokenClient` 팝업 모델이다. 클라이언트 비밀 키와 서버 콜백 URL을 넣지 않는다. 운영 OAuth 클라이언트의 승인된 JavaScript 원본은 `https://baeumlog.chorok.app`만 사용한다. localhost, 127.0.0.1, Vercel 기본 도메인과 이전 운영 원본은 운영 클라이언트에서 제거한다. 개발이 필요하면 별도 Google Cloud 프로젝트와 OAuth 클라이언트를 사용한다.
+현재 운영 버전은 GIS `initTokenClient` 팝업 모델이다. 클라이언트 비밀 키와 서버 콜백 URL을 넣지 않는다. 운영 OAuth 클라이언트의 승인된 JavaScript 원본은 `https://baeumlog.chorok.app`와 `https://g-learning-log-next.vercel.app`이다. Picker 브라우저 키의 허용 리퍼러에는 두 주소의 `/*`와 `https://docs.google.com/*`가 포함된다. localhost, 127.0.0.1과 이전 운영 원본은 운영 클라이언트에서 제거한다. 개발이 필요하면 별도 Google Cloud 프로젝트와 OAuth 클라이언트를 사용한다.
 
 최초 교사 로그인에서 비민감 권한인 `drive.file` 하나만 요청한다. 유효한 토큰은 조회·학급 생성·과제 배부·기록 저장에서 재사용하며, 추가 기능마다 계정 선택을 다시 열지 않는다. 예시 슬라이드와 예전 학급·과제는 Google Picker에서 교사가 직접 선택한다. 새 학급·과제·학생 슬라이드·교사 기록 시트는 앱이 만들기 때문에 이후 자동으로 표시할 수 있다. 토큰은 메모리에만 보관하므로 새로고침·로그아웃·만료 후에는 연결이 필요할 수 있다.
 

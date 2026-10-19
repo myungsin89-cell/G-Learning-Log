@@ -26,9 +26,9 @@ Google 심사에는 현재 G배움로그 화면과 기능만 제출한다. 운�
 ## Google Cloud 운영 설정
 
 1. Google Picker API, Google Drive API, Google Sheets API, Google Slides API를 활성화한다.
-2. 운영 웹 OAuth 클라이언트의 승인된 JavaScript 원본은 `https://baeumlog.chorok.app`만 둔다.
-3. localhost, 127.0.0.1, Vercel 기본 도메인, 이전 개발·테스트 원본과 사용하지 않는 리디렉션 URI를 운영 클라이언트에서 제거한다.
-4. Picker용 브라우저 API 키는 HTTP 리퍼러로 제한한다. 허용 리퍼러는 `https://baeumlog.chorok.app/*`와 Picker iframe에 필요한 `https://docs.google.com/*`다.
+2. 운영 웹 OAuth 클라이언트의 승인된 JavaScript 원본은 `https://baeumlog.chorok.app`와 학생 링크 대체 주소인 `https://g-learning-log-next.vercel.app`이다.
+3. localhost, 127.0.0.1, 이전 개발·테스트 원본과 사용하지 않는 리디렉션 URI를 운영 클라이언트에서 제거한다.
+4. Picker용 브라우저 API 키는 HTTP 리퍼러로 제한한다. 허용 리퍼러는 두 운영 주소의 `/*`와 Picker iframe에 필요한 `https://docs.google.com/*`다.
 5. API 키의 API 제한은 Google Picker API와 Google Drive API로 둔다.
 6. 개발이 다시 필요하면 별도 Google Cloud 프로젝트와 OAuth 클라이언트를 사용한다.
 
@@ -43,7 +43,7 @@ Google 심사에는 현재 G배움로그 화면과 기능만 제출한다. 운�
 앱 공개 전환과 사이트 소유권 확인은 Google 인증 승인과 별개다. 최종 제출 전에는 다음을 확인한다.
 
 - Cloud 데이터 액세스에 `drive.file`만 남아 있는지
-- 운영 OAuth 원본이 `https://baeumlog.chorok.app`로만 정리됐는지
+- 운영 OAuth 원본이 두 운영 주소로 정리됐는지
 - Picker API와 제한된 브라우저 키가 준비됐는지
 - 실제 운영 배포에서 로그인, 기존 파일 선택, 학급 생성, 과제 생성, 기록·메모·댓글이 동작하는지
 - 영상의 동의 화면과 콘솔에 등록한 최종 권한이 일치하는지

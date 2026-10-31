@@ -9,7 +9,7 @@ const CONCEPTS = [
     id: 'trace',
     name: '작업 흔적',
     subtitle: '슬라이드 + 기록점',
-    description: '겹친 슬라이드와 작은 점으로 학생의 변화가 차곡차곡 남는 모습을 표현했습니다.',
+    description: '노란 슬라이드 위에 초록 기록이 쌓이며 학생의 변화가 차곡차곡 남는 모습을 표현했습니다.',
     src: '/brand/seulgirok-trace.svg',
     recommended: true,
   },
@@ -104,7 +104,7 @@ export default function SeulgirokBrandPreview() {
             <span style={{ background: '#203F35' }} title="깊은 초록" />
             <span style={{ background: '#246B55' }} title="기록 초록" />
             <span style={{ background: '#7FC5A2' }} title="새싹 민트" />
-            <span style={{ background: '#F2C94C' }} title="기록 노랑" />
+            <span style={{ background: '#F9AB00' }} title="슬라이드 노랑" />
           </div>
         </div>
 

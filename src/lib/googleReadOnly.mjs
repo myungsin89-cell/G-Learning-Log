@@ -58,7 +58,7 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       return { storeId: info.id, ...parseWorkspaceEvents(data.values || []) };
     },
     async listClasses() {
-      const files = await listFiles("(name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
+      const files = await listFiles("(name = '슬기록_학급명단_저장소' or name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
       const classes = [];
       for (const file of files) {
         const metadata = await get('sheets', `spreadsheets/${encodeURIComponent(file.id)}`, [['fields', 'sheets(properties(title))']]);
@@ -72,7 +72,7 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
     },
     async listAssignments(className) {
       // Filter exact class prefixes locally; a class name never becomes Drive query syntax.
-      const files = await listFiles("(name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
+      const files = await listFiles("(name contains '슬기록_과제_' or name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
       return files.flatMap((file) => {
         const parsed = parseAssignmentFileName(file.name);
         return parsed?.className === className ? [{ id: file.id, name: parsed.assignmentName, createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }] : [];

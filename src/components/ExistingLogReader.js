@@ -198,11 +198,11 @@ export default function ExistingLogReader() {
   async function importClasses() {
     setBusy(true); setError(''); setNotice('');
     try {
-      const files = await pickFiles({ kind: 'spreadsheet', multiple: true, title: '기존 G배움로그 학급 명단 선택' });
+      const files = await pickFiles({ kind: 'spreadsheet', multiple: true, title: '기존 슬기록·G배움로그 학급 명단 선택' });
       if (!files.length) return;
       const found = await api().listClasses();
       setClasses(found);
-      setNotice(found.length ? `선택한 파일의 접근을 연결했습니다. 학급 ${found.length}개를 확인했어요.` : '파일 접근은 연결했지만 G배움로그 학급 명단을 찾지 못했습니다. 학급 명단 저장소를 선택해 주세요.');
+      setNotice(found.length ? `선택한 파일의 접근을 연결했습니다. 학급 ${found.length}개를 확인했어요.` : '파일 접근은 연결했지만 슬기록 또는 G배움로그 학급 명단을 찾지 못했습니다. 학급 명단 저장소를 선택해 주세요.');
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }

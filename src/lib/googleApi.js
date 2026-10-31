@@ -1,4 +1,4 @@
-// Client-side Google API wrapper for SlideSight
+// Client-side Google API wrapper for 슬기록
 import { createGoogleClassroom } from './googleClassroom.mjs';
 import { assignmentFileName, parseAssignmentFileName } from './assignmentFileNames.mjs';
 
@@ -258,7 +258,7 @@ export async function createDatabaseSpreadsheet(className, assignmentName) {
       }
     });
   } catch (permErr) {
-    console.warn('[SlideSight] 스프레드시트 링크 공유 권한 설정 실패 (학교 도메인 정책 제한일 수 있음):', permErr);
+    console.warn('[슬기록] 스프레드시트 링크 공유 권한 설정 실패 (학교 도메인 정책 제한일 수 있음):', permErr);
   }
 
   return spreadsheetId;
@@ -313,7 +313,7 @@ export async function duplicateSlideForStudents(templateId, studentsList, spread
           fileId: templateId,
           supportsAllDrives: true,
           resource: {
-            name: `[${studentNum ? studentNum + '번 ' : ''}${studentName}] SlideSight 과제`
+            name: `[${studentNum ? studentNum + '번 ' : ''}${studentName}] 슬기록 과제`
           }
         });
 
@@ -331,7 +331,7 @@ export async function duplicateSlideForStudents(templateId, studentsList, spread
             }
           });
         } catch (permErr) {
-          console.warn(`[SlideSight] ${studentName} 슬라이드 권한 설정 경고:`, permErr);
+          console.warn(`[슬기록] ${studentName} 슬라이드 권한 설정 경고:`, permErr);
         }
 
         completedCount++;
@@ -404,7 +404,7 @@ export async function duplicateSlideForStudents(templateId, studentsList, spread
       }
     });
   } catch (baseErr) {
-    console.warn('[SlideSight] 템플릿 기준선 측정 실패 (대체 계산 사용):', baseErr);
+    console.warn('[슬기록] 템플릿 기준선 측정 실패 (대체 계산 사용):', baseErr);
   }
 
   return studentsResults;
@@ -562,7 +562,7 @@ export async function fetchSlideStats(slideId, keywords = []) {
 export async function fetchAssignmentsList(className = null) {
   if (!getAccessToken()) throw new Error('Not authenticated');
 
-  const query = "(name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
+  const query = "(name contains '슬기록_과제_' or name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
 
   const response = await window.gapi.client.drive.files.list({
     q: query,
@@ -784,9 +784,9 @@ export async function appendActivityLogs(spreadsheetId, logs) {
  * 8. 학급 명단 저장소 파일 검색 및 생성
  */
 async function getOrCreateRosterSpreadsheet() {
-  // 1) "G배움로그_학급명단_저장소" 또는 기존 "슬라이드대시보드_학급명단_저장소" 파일 검색
+  // 1) 슬기록 또는 이전 버전 학급 명단 저장소 검색
   const listResp = await window.gapi.client.drive.files.list({
-    q: "(name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+    q: "(name = '슬기록_학급명단_저장소' or name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
     fields: 'files(id, name)'
   });
 
@@ -798,7 +798,7 @@ async function getOrCreateRosterSpreadsheet() {
   // 2) 없으면 새로 만들기
   const createResp = await window.gapi.client.sheets.spreadsheets.create({
     resource: {
-      properties: { title: 'G배움로그_학급명단_저장소' }
+      properties: { title: '슬기록_학급명단_저장소' }
     }
   });
   return createResp.result.spreadsheetId;
@@ -866,7 +866,7 @@ export async function fetchClassRosters() {
   if (!getAccessToken()) throw new Error('Not authenticated');
 
   const listResp = await window.gapi.client.drive.files.list({
-    q: "(name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+    q: "(name = '슬기록_학급명단_저장소' or name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
     fields: 'files(id)'
   });
 
@@ -892,7 +892,7 @@ export async function loadClassRoster(rosterName) {
   if (!getAccessToken()) throw new Error('Not authenticated');
 
   const listResp = await window.gapi.client.drive.files.list({
-    q: "(name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+    q: "(name = '슬기록_학급명단_저장소' or name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
     fields: 'files(id)'
   });
 
@@ -920,7 +920,7 @@ export async function deleteClassRoster(rosterName) {
   if (!getAccessToken()) throw new Error('Not authenticated');
 
   const listResp = await window.gapi.client.drive.files.list({
-    q: "(name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+    q: "(name = '슬기록_학급명단_저장소' or name = 'G배움로그_학급명단_저장소' or name = '슬라이드대시보드_학급명단_저장소') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
     fields: 'files(id)'
   });
 

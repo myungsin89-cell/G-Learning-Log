@@ -92,7 +92,7 @@ export async function createStudentQrPdf({ className, assignmentName, students }
       context.fillText('개인별로 잘라서 배부', x + 590, y + 550);
     }
     context.fillStyle = '#718579'; context.font = '27px system-ui, "Malgun Gothic", sans-serif';
-    context.fillText('G배움로그  ·  이 종이에는 학생별 편집 링크가 포함되어 있습니다.', 135, PAGE_HEIGHT - 95);
+    context.fillText('슬기록  ·  이 종이에는 학생별 편집 링크가 포함되어 있습니다.', 135, PAGE_HEIGHT - 95);
     pages.push({ jpeg: canvas.toDataURL('image/jpeg', 0.92), width: PAGE_WIDTH, height: PAGE_HEIGHT });
   }
   return pdfFromJpegPages(pages);

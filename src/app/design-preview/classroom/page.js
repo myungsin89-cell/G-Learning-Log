@@ -1,7 +1,7 @@
 import ClassWorkspacePreview from '@/components/ClassWorkspacePreview';
 
 export const metadata = {
-  title: 'G배움로그 학급 과제 화면 시안',
+  title: '슬기록 학급 과제 화면 시안',
   description: '학급별 슬라이드 과제 목록과 새 과제 만들기 디자인',
 };
 

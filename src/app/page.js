@@ -169,7 +169,7 @@ export default function Home() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "G배움로그_명단양식.csv");
+    link.setAttribute("download", "슬기록_명단양식.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

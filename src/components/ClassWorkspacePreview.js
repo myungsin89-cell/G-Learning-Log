@@ -84,7 +84,7 @@ export default function ClassWorkspacePreview({ className = '5학년 2반' }) {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/design-preview/classes" className={styles.brand}><BrandMark size={36} /><span>G배움로그</span></Link>
+          <Link href="/design-preview/classes" className={styles.brand}><BrandMark size={36} /><span>슬기록</span></Link>
           <Link className={styles.backLink} href="/design-preview/classes"><Icon name="back" size={15} /> 학급 목록</Link>
         </div>
       </header>

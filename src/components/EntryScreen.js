@@ -28,19 +28,19 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
     <main className={styles.page}>
       <div className={styles.canvas}>
         <header className={styles.header}>
-          <div className={styles.brand} aria-label="G배움로그">
+          <div className={styles.brand} aria-label="슬기록">
             <BrandMark size={42} />
-            <span>G배움로그</span>
+            <span>슬기록</span>
           </div>
           <span className={styles.headerNote}>학생의 작업 과정을 살피는 도구</span>
         </header>
 
         <div className={styles.layout}>
           <section className={styles.story} aria-labelledby="hero-title">
-            <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> G배움로그를 소개합니다</div>
+            <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> 결과보다 과정을 봅니다</div>
             <h1 id="hero-title" className={styles.headline}>
-              학생의 슬라이드 작업,<br />
-              <span>과정까지 한눈에.</span>
+              슬라이드에 남은 작은 변화,<br />
+              <span>배움의 과정이 됩니다.</span>
             </h1>
             <p className={styles.description}>
               구글 슬라이드로 수업할 때, 학생마다 다른 진행 상황을 살피고 필요한 도움을 제때 전할 수 있습니다.
@@ -48,7 +48,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
           </section>
 
           <section className={styles.signInCard} aria-labelledby="sign-in-title">
-            <div className={styles.cardOverline}>G배움로그 시작하기</div>
+            <div className={styles.cardOverline}>슬기록 시작하기</div>
             <h2 id="sign-in-title">선생님, 반갑습니다.</h2>
             <p>Google 계정으로 연결하면<br />학급의 기록을 이어서 볼 수 있어요.</p>
 
@@ -68,7 +68,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
             {children}
 
             <div className={styles.supported}>
-              선택한 파일과 G배움로그가 만든 자료만 연결합니다.
+              선택한 파일과 슬기록이 만든 자료만 연결합니다.
             </div>
 
             <div className={styles.privacyNote}>
@@ -81,7 +81,7 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
           </section>
 
           <section className={styles.steps} aria-labelledby="steps-title">
-            <h2 id="steps-title">G배움로그에서 살펴볼 수 있는 것</h2>
+            <h2 id="steps-title">슬기록에서 살펴볼 수 있는 것</h2>
             <div className={styles.stepList}>
               <div className={styles.step}>
                 <span>01</span>

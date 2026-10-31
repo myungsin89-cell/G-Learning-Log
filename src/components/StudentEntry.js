@@ -25,7 +25,7 @@ export default function StudentEntry({ sheetId, example = null }) {
     return () => { cancelled = true; window.removeEventListener('focus', whenVisible); document.removeEventListener('visibilitychange', whenVisible); };
   }, [sheetId, example, retry]);
   const visible = (data?.students || []).filter((student) => `${student.number} ${student.name}`.includes(search.trim()));
-  return <div className={styles.page}><header className={styles.brand}><BrandMark size={36} /><span>G배움로그</span></header><main className={styles.main}>
+  return <div className={styles.page}><header className={styles.brand}><BrandMark size={36} /><span>슬기록</span></header><main className={styles.main}>
     {example && <span className={styles.example}>디자인 시안</span>}
     <div className={styles.heading}><p>{data?.className || '우리 학급'}</p><h1>{data?.assignmentName || '수업 과제 접속'}</h1><span>내 이름을 선택해 슬라이드를 열어 보세요.</span></div>
     {error ? <div className={styles.empty} role="alert"><p>{error}</p><button onClick={() => { setError(''); setRetry((value) => value + 1); }}>다시 불러오기</button></div> : !data ? <p className={styles.empty} role="status">학생 명단을 불러오는 중이에요…</p> : <>

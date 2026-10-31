@@ -4,9 +4,12 @@
   <circle cx="-120" cy="690" r="270" fill="#f0f5ef"/>
   <g transform="translate(72 66)">
     <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-      <path d="M47.5 20C43.9 14.4 37.8 11 30.5 11C18.9 11 10.5 20.2 10.5 32S18.9 53 30.5 53C42.4 53 51 44.7 51 33H34" stroke="#246b55" stroke-width="5.7" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 21.5v22A6.5 6.5 0 0 0 16.5 50h28" stroke="#F9AB00" stroke-width="4" stroke-linecap="round"/>
+      <rect x="16" y="10" width="39" height="34" rx="7" fill="#F7F8F3" stroke="#203F35" stroke-width="4"/>
+      <path d="m24 34 8.2-11 8.2 11H46" stroke="#246B55" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="50.5" cy="34" r="3.5" fill="#7FC5A2"/>
     </svg>
-    <text x="62" y="36" fill="#20342b" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="30" font-weight="700" letter-spacing="-1.5">G배움로그</text>
+    <text x="62" y="36" fill="#20342b" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="30" font-weight="700" letter-spacing="-1.5">슬기록</text>
   </g>
   <rect x="72" y="172" width="44" height="3" rx="1.5" fill="#246b55"/>
   <text x="72" y="234" fill="#246b55" font-family="Malgun Gothic, Noto Sans CJK KR, sans-serif" font-size="25" font-weight="700">STUDENT CLASSROOM</text>

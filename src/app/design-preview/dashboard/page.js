@@ -2,7 +2,7 @@ import SlideDashboardPreview from '@/components/SlideDashboardPreview';
 import { previewAssignments } from '@/lib/slidePreviewData';
 import { parseRosterInput } from '@/lib/workRecords.mjs';
 
-export const metadata = { title: 'G배움로그 학생 작업 현황 시안' };
+export const metadata = { title: '슬기록 학생 작업 현황 시안' };
 
 export default async function DashboardPreviewPage({ searchParams }) {
   const query = await searchParams;

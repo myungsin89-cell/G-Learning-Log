@@ -116,7 +116,7 @@ export default function StudentPortal() {
       {!isCodeVerified ? (
         <div className="card" style={{ padding: '2.5rem 2rem', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
-            <BrandMark size={56} alt="G배움로그" />
+            <BrandMark size={56} alt="슬기록" />
           </div>
 
           <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--brand-green-dark)', margin: '0 0 0.5rem 0' }}>

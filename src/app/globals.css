@@ -1,14 +1,15 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 
 :root {
-  /* Green Theme Design System Colors (G배움 로그) */
-  --brand-green: #16a34a; /* Vibrant Emerald Green */
-  --brand-green-dark: #15803d; /* Deep Forest Green */
-  --brand-green-gradient: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  /* 슬기록 brand colors */
+  --brand-green: #246b55;
+  --brand-green-dark: #203f35;
+  --brand-yellow: #f9ab00;
+  --brand-green-gradient: linear-gradient(135deg, #2f8066 0%, #1d5947 100%);
   
-  --bg-light-green: #f0fdf4; /* Light green background */
-  --border-light-green: #bbf7d0; /* Pale green border */
-  --text-light-green: #15803d; /* Forest green text */
+  --bg-light-green: #f1f7f2;
+  --border-light-green: #cfe1d3;
+  --text-light-green: #246b55;
 
   /* Auxiliary Accent Colors */
   --color-violet-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);

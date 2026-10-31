@@ -3,7 +3,7 @@ import MadeByStamp from '@/components/MadeByStamp';
 import styles from '@/components/ClassSelection.module.css';
 
 export const metadata = {
-  title: 'G배움로그 첫 학급 시안',
+  title: '슬기록 첫 학급 시안',
   description: '학급이 없을 때 보여주는 학급 선택 화면의 디자인 시안',
 };
 

@@ -8,5 +8,5 @@ export function SupportContact() {
 }
 
 export default function PublicInfoPage({ title, children }) {
-  return <div className={styles.page}><header><Link href="/" className={styles.brand}><BrandMark size={34} /><span>G배움로그</span></Link><Link href="/">홈으로</Link></header><main><h1>{title}</h1>{children}</main><footer><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용 안내</Link><span>made by 초록덕후</span></footer></div>;
+  return <div className={styles.page}><header><Link href="/" className={styles.brand}><BrandMark size={34} /><span>슬기록</span></Link><Link href="/">홈으로</Link></header><main><h1>{title}</h1>{children}</main><footer><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용 안내</Link><span>made by 초록덕후</span></footer></div>;
 }

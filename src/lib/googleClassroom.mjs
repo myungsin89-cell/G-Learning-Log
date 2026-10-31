@@ -94,7 +94,7 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     const workspace = createGoogleWorkspace(accessToken, assignment, students, fetcher);
     const saved = await workspace.initialize();
     const displayName = foldWorkspace(saved.events).settings.title || assignment.name;
-    const file = await ensureFile(jobId, `G배움로그_학생접속_[${className}]_[${displayName}]`, 'student-join-v2');
+    const file = await ensureFile(jobId, `슬기록_학생접속_[${className}]_[${displayName}]`, 'student-join-v2');
     await assertJob(file.id, jobId, 'student-join-v2');
     const titles = await tabs(file.id, ['students']);
     for (const title of titles.filter((title) => title !== 'students')) {
@@ -212,7 +212,7 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       if (name === 'Sheet1' || name.startsWith('_')) throw new Error('학급 이름에는 Sheet1이나 _로 시작하는 이름을 사용할 수 없습니다.');
       assertRosterConfirmation(privacyConfirmed);
       onProgress('학급 명단 시트 만드는 중…', { percent: 0 });
-      const file = await ensureFile(jobId, 'G배움로그_학급명단_저장소', 'class-roster-v2', null, { className: name });
+      const file = await ensureFile(jobId, '슬기록_학급명단_저장소', 'class-roster-v2', null, { className: name });
       onProgress('학급 저장 공간을 준비했어요.', { percent: 30 });
       await plan(file, jobId, 'class-roster-v2', { name, students }, [name]);
       const notice = await read(file.id, "'_setup'!A3:B4");

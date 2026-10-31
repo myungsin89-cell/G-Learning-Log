@@ -65,7 +65,7 @@ export default function StudentAccess({ className, assignment, students, entry, 
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `G배움로그_${className}_${assignment.name}_학생별QR.pdf`.replace(/[\\/:*?"<>|]/g, '_');
+      anchor.download = `슬기록_${className}_${assignment.name}_학생별QR.pdf`.replace(/[\\/:*?"<>|]/g, '_');
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage(`${linkedStudents.length}명 학생 QR PDF를 내려받았습니다.`);

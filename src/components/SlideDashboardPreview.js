@@ -245,7 +245,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
     const url = URL.createObjectURL(new Blob([data], { type: kind === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8' }));
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `G배움로그_${className.replace(/[<>:"/\\|?*]/g, '_')}_${assignment.name.replace(/[<>:"/\\|?*]/g, '_')}_${readOnly ? '저장기록' : '예시'}.${kind}`;
+    anchor.download = `슬기록_${className.replace(/[<>:"/\\|?*]/g, '_')}_${assignment.name.replace(/[<>:"/\\|?*]/g, '_')}_${readOnly ? '저장기록' : '예시'}.${kind}`;
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setNotice(readOnly ? '저장된 기록의 내보내기를 요청했습니다. JSON에는 원본 행과 댓글 조회 여부도 포함됩니다.' : kind === 'csv' ? '예시 종합기록 CSV를 내려받았습니다.' : '예시 전체 기록 JSON을 내려받았습니다. 확인 시각과 수집 구분이 포함됩니다.');
@@ -253,7 +253,7 @@ export default function SlideDashboardPreview({ className, assignment, initialDa
 
   return <div className={styles.page}>
     <header className={styles.header}><div className={styles.headerInner}>
-      {readOnly ? <button className={`${styles.brand} ${styles.brandButton}`} onClick={onHome || onBack}><BrandMark size={34} /><span>G배움로그</span></button> : <Link href="/design-preview/classes" className={styles.brand}><BrandMark size={34} /><span>G배움로그</span></Link>}
+      {readOnly ? <button className={`${styles.brand} ${styles.brandButton}`} onClick={onHome || onBack}><BrandMark size={34} /><span>슬기록</span></button> : <Link href="/design-preview/classes" className={styles.brand}><BrandMark size={34} /><span>슬기록</span></Link>}
       {readOnly ? <button className={styles.backLink} onClick={onBack}><Icon name="back" size={15} /> 과제 목록</button> : <Link className={styles.backLink} href={`/design-preview/classroom?className=${encodeURIComponent(className)}`}><Icon name="back" size={15} /> 과제 목록</Link>}
     </div></header>
     <main className={styles.main}>

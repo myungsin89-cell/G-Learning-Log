@@ -48,7 +48,7 @@ export function createGoogleWorkspace(accessToken, assignment, students, fetcher
         if (files.length > 1) throw new Error('이 과제의 교사 저장소가 여러 개입니다. 파일을 합치거나 덮어쓰지 않았습니다.');
         if (files.length) storeId = files[0].id;
         else {
-          const file = await request('drive', 'files', { method: 'POST', params: [['fields', 'id'], ['ignoreDefaultVisibility', 'true']], body: { name: `G배움로그_새기록_[${assignment.id}]`, mimeType, appProperties: { gbaeumStore: marker, sourceSheet: assignment.id }, description: `${assignment.name} · 교사 비공개 작업기록과 메모. 학생에게 공유하지 마세요.` } });
+          const file = await request('drive', 'files', { method: 'POST', params: [['fields', 'id'], ['ignoreDefaultVisibility', 'true']], body: { name: `슬기록_새기록_[${assignment.id}]`, mimeType, appProperties: { gbaeumStore: marker, sourceSheet: assignment.id }, description: `${assignment.name} · 교사 비공개 작업기록과 메모. 학생에게 공유하지 마세요.` } });
           storeId = file.id;
         }
         await assertPrivate();

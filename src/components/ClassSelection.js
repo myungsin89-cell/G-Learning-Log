@@ -8,9 +8,9 @@ export function ClassSelectionHeader({ onLogout, preview = false, displayName, o
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
-        <div className={styles.brand} aria-label="G배움로그">
+        <div className={styles.brand} aria-label="슬기록">
           <BrandMark size={36} />
-          <span>G배움로그</span>
+          <span>슬기록</span>
         </div>
         <div className={styles.headerActions}>
           <span className={styles.headerLabel}>{displayName ? `${displayName} 선생님` : '내 학급'}</span>

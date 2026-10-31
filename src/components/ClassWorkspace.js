@@ -100,7 +100,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
   const visible = assignments.filter((assignment) => assignment.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   return <div className={styles.page}>
     <header className={styles.header}><div className={styles.headerInner}>
-      <button className={`${styles.brand} ${real.brandButton}`} onClick={onBack} disabled={busy}><BrandMark size={36} /><span>G배움로그</span></button>
+      <button className={`${styles.brand} ${real.brandButton}`} onClick={onBack} disabled={busy}><BrandMark size={36} /><span>슬기록</span></button>
       <div className={real.headerActions}><span>{account?.displayName && `${account.displayName} 선생님`}</span><button className={real.plainButton} onClick={onReconnect} disabled={busy}>다시 로그인</button><button className={real.plainButton} onClick={onLogout} disabled={busy}>로그아웃</button></div>
     </div></header>
     <main className={styles.main}>
@@ -129,7 +129,7 @@ export default function ClassWorkspace({ classItem, assignments, roster, rosterE
             <button className={styles.cardButton} disabled={busy} onClick={() => onOpen(assignment)} aria-label={`${assignment.name} ${assignment.slidesTrashed ? '저장된 기록 보기' : '학생 작업 살펴보기'}`}><span>{assignment.slidesTrashed ? '저장된 기록 보기' : '학생 작업 살펴보기'}</span><Icon name="arrow" size={17} /></button>
           </article>)}
         </div>
-        {!visible.length && <div className={styles.empty}><h3>{search ? '검색한 과제가 없어요' : '첫 과제를 만들어 보세요'}</h3><p>{search ? '다른 과제 이름을 검색해 주세요.' : '새 과제를 만들거나 이전 G배움로그 과제 시트를 가져올 수 있어요.'}</p>{search ? <button className={styles.secondaryButton} onClick={() => setSearch('')}>전체 과제 보기</button> : onCreate && <div className={real.assignmentActions}>{onImport && <button className={styles.secondaryButton} onClick={onImport} disabled={busy}>기존 과제 가져오기</button>}<button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>새 과제 만들기</button></div>}</div>}
+        {!visible.length && <div className={styles.empty}><h3>{search ? '검색한 과제가 없어요' : '첫 과제를 만들어 보세요'}</h3><p>{search ? '다른 과제 이름을 검색해 주세요.' : '새 과제를 만들거나 이전 슬기록·G배움로그 과제 시트를 가져올 수 있어요.'}</p>{search ? <button className={styles.secondaryButton} onClick={() => setSearch('')}>전체 과제 보기</button> : onCreate && <div className={real.assignmentActions}>{onImport && <button className={styles.secondaryButton} onClick={onImport} disabled={busy}>기존 과제 가져오기</button>}<button className={styles.primaryButton} onClick={onCreate} disabled={busy || !roster?.length}>새 과제 만들기</button></div>}</div>}
       </section>
       <MadeByStamp />
     </main>

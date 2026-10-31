@@ -1,8 +1,8 @@
-# G배움로그 Google 인증 영상 촬영 안내
+# 슬기록 Google 인증 영상 촬영 안내
 
-대상 앱: G배움로그
+대상 앱: 슬기록
 
-운영 주소: `https://baeumlog.chorok.app`
+운영 주소: `https://seulgirok.chorok.app`
 요청 권한: `drive.file`
 
 실제 학생 자료가 없는 테스트 계정을 사용한다. 비밀번호와 2단계 인증은 녹화를 잠시 멈추고, 학생 개인정보·토큰·비밀 키는 영상에 포함하지 않는다. Google 동의 화면은 주소창과 앱 이름, 요청 권한을 확인할 수 있게 촬영한다.
@@ -11,7 +11,7 @@
 
 | 장면 | 실제 조작 | 영상에 남길 결과 |
 | --- | --- | --- |
-| 1. 앱 소개 | 운영 주소를 연다 | `baeumlog.chorok.app`, G배움로그 이름, 개인정보처리방침 링크 |
+| 1. 앱 소개 | 운영 주소를 연다 | `seulgirok.chorok.app`, 슬기록 이름, 개인정보처리방침 링크 |
 | 2. Google 연결 | Google 계정으로 계속하기를 누르고 권한을 허용한다 | `drive.file` 권한 하나와 Google 계정 선택 화면 |
 | 3. 기존 학급 가져오기 | 기존 학급 가져오기에서 테스트용 학급 명단 시트를 선택한다 | 교사가 직접 선택한 시트의 학급과 명단 표시 |
 | 4. 기존 과제 가져오기 | 학급에 들어가 기존 과제 가져오기에서 테스트 과제 시트를 선택한다 | 선택한 과제 카드와 학생 연결 정보 표시 |
@@ -29,6 +29,6 @@
 - 피드백: `관찰한 날짜도 함께 적어주세요.`
 - 학생 답장: `날짜를 추가했습니다.`
 
-촬영 뒤 동의 화면이 `drive.file` 하나만 표시하는지, 영상 속 주소와 정책 링크가 모두 `baeumlog.chorok.app`인지 확인한다. YouTube에 일부 공개로 올리고 로그인하지 않은 브라우저에서 재생 가능한지 확인한 뒤 심사 자료에 링크를 넣는다.
+촬영 뒤 동의 화면이 `drive.file` 하나만 표시하는지, 영상 속 주소와 정책 링크가 모두 `seulgirok.chorok.app`인지 확인한다. YouTube에 일부 공개로 올리고 로그인하지 않은 브라우저에서 재생 가능한지 확인한 뒤 심사 자료에 링크를 넣는다.
 
 공식 자료: [OAuth 앱 인증 요구사항](https://support.google.com/cloud/answer/13464321), [Drive 최소 권한](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Picker 구현](https://developers.google.com/workspace/drive/picker/guides/web-picker)

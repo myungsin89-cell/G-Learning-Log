@@ -2,7 +2,7 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata = {
-  metadataBase: new URL('https://baeumlog.chorok.app'),
+  metadataBase: new URL('https://seulgirok.chorok.app'),
   title: '슬기록 | 슬라이드 수업의 과정을 슬기롭게',
   description: '학생의 슬라이드 작업 변화와 피드백이 필요한 순간을 한눈에 살펴보세요.',
   openGraph: {

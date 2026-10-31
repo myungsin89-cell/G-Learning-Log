@@ -50,4 +50,6 @@
 
 ## 공개 전환 순서
 
-현재 운영 주소 `baeumlog.chorok.app`은 새 도메인과 Google OAuth 설정이 준비될 때까지 유지한다. 코드와 화면 검증 후 도메인, OAuth 동의 화면, 개인정보처리방침 등록 정보, 에듀집 등록 정보를 같은 시점에 `슬기록`으로 전환한다.
+- 대표 운영 주소: `https://seulgirok.chorok.app`
+- 이전 주소 `https://baeumlog.chorok.app`은 기존 링크 호환을 위해 유지한다.
+- Google OAuth 동의 화면, 개인정보처리방침 등록 정보, 공유 이미지와 에듀집 등록 정보는 `슬기록` 이름과 대표 운영 주소를 사용한다.

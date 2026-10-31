@@ -11,7 +11,8 @@ import styles from './StudentAccess.module.css';
 const subscribeOrigin = () => () => {};
 const currentOrigin = () => window.location.origin;
 const serverOrigin = () => '';
-const CHOROK_ORIGIN = 'https://baeumlog.chorok.app';
+const SEULGIROK_ORIGIN = 'https://seulgirok.chorok.app';
+const LEGACY_ORIGIN = 'https://baeumlog.chorok.app';
 const VERCEL_ORIGIN = 'https://g-learning-log-next.vercel.app';
 
 export default function StudentAccess({ className, assignment, students, entry, onConfigure, onClose, preview = false }) {
@@ -23,10 +24,10 @@ export default function StudentAccess({ className, assignment, students, entry, 
   const activeEntry = updated || entry, mode = choice || activeEntry?.mode || 'shared';
   const linkedStudents = students.filter((student) => student.slideUrl);
   const origin = useSyncExternalStore(subscribeOrigin, currentOrigin, serverOrigin);
-  const hasShareDomains = !preview && [CHOROK_ORIGIN, VERCEL_ORIGIN].includes(origin);
-  const linkOrigin = hasShareDomains ? VERCEL_ORIGIN : origin;
+  const hasShareDomains = !preview && [SEULGIROK_ORIGIN, LEGACY_ORIGIN, VERCEL_ORIGIN].includes(origin);
+  const linkOrigin = hasShareDomains ? SEULGIROK_ORIGIN : origin;
   const link = !origin ? '' : preview ? `${origin}/design-preview/student` : activeEntry?.id ? studentEntryUrl(linkOrigin, activeEntry.id) : '';
-  const fallbackLink = hasShareDomains && activeEntry?.id ? studentEntryUrl(CHOROK_ORIGIN, activeEntry.id) : '';
+  const fallbackLink = hasShareDomains && activeEntry?.id ? studentEntryUrl(VERCEL_ORIGIN, activeEntry.id) : '';
   const qrUrl = qr?.link === link ? qr.url : '';
   const individualQrUrl = individualQr?.link === selectedQr?.link ? individualQr?.url : '';
   const local = link && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(link).hostname);

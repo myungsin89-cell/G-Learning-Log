@@ -75,7 +75,7 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       const files = await listFiles("(name contains '슬기록_과제_' or name contains 'G배움로그_과제_' or name contains 'SlideSight_DB_') and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
       return files.flatMap((file) => {
         const parsed = parseAssignmentFileName(file.name);
-        return parsed?.className === className ? [{ id: file.id, name: parsed.assignmentName, createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }] : [];
+        return parsed?.className === className ? [{ id: file.id, name: parsed.assignmentName, createdAt: file.createdTime || null, creationId: file.appProperties?.gbaeumCreation, coverSlideId: file.appProperties?.coverSlide, blankTemplate: file.appProperties?.blankTemplate === 'true', setupStatus: file.appProperties?.setupStatus, slidesTrashed: file.appProperties?.slidesTrashed === 'true', studentEntry: file.appProperties?.entryMode ? { mode: file.appProperties.entryMode, id: file.appProperties.joinSheet } : null }] : [];
       });
     },
     async loadCreationPlan(assignment) {
@@ -100,6 +100,7 @@ export function createGoogleReader(accessToken, fetcher = globalThis.fetch) {
       return { studentCount: data.students.length, linkedCount: assignment.slidesTrashed ? 0 : data.students.filter((student) => student.slideId).length, coverSlideId: assignment.slidesTrashed ? null : data.students.find((student) => student.slideId)?.slideId || null };
     },
     async loadAssignmentCover(assignment) {
+      if (assignment.blankTemplate) return null;
       if (assignment.slidesTrashed && !assignment.creationId) return null;
       let slideId = parsePresentationId(assignment.coverSlideId), source = 'template';
       if (!slideId && assignment.creationId) {

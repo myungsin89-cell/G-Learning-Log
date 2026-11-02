@@ -40,10 +40,10 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
     if (result.files?.length > 1) throw new Error('같은 생성 기록의 파일이 여러 개입니다. 자동으로 합치거나 덮어쓰지 않았습니다.');
     return result.files?.[0] || null;
   }
-  async function ensureFile(jobId, name, kind, source = null, extraProperties = {}) {
+  async function ensureFile(jobId, name, kind, source = null, extraProperties = {}, mimeType = 'application/vnd.google-apps.spreadsheet') {
     const known = await find(jobId);
     if (known) return known;
-    const body = { name, appProperties: { ...extraProperties, gbaeumCreation: jobId, gbaeumStore: kind, ...(kind === 'classroom-assignment-v2' ? { setupStatus: 'creating' } : {}) }, ...(source ? {} : { mimeType: 'application/vnd.google-apps.spreadsheet' }) };
+    const body = { name, appProperties: { ...extraProperties, gbaeumCreation: jobId, gbaeumStore: kind, ...(kind === 'classroom-assignment-v2' ? { setupStatus: 'creating' } : {}) }, ...(source ? {} : { mimeType }) };
     try { return await request('drive', source ? `files/${encodeURIComponent(source)}/copy` : 'files', { method: 'POST', body, params: [['fields', 'id,name,mimeType,appProperties'], ['ignoreDefaultVisibility', 'true']] }); }
     catch (err) { const recovered = await find(jobId); if (recovered) return recovered; throw err; }
   }
@@ -222,26 +222,41 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
       onProgress('학급과 학생 명단을 저장했어요.', { percent: 100 });
       return { id: `${file.id}:${name}`, name, rosterId: file.id };
     },
-    async createAssignment({ className: inputClass, name: inputName, templateUrl, roster, keywords: inputKeywords, keywordsText = '', shareSlides = true, entryMode = 'shared', jobId, onProgress = () => {} }) {
+    async createAssignment({ className: inputClass, name: inputName, templateUrl, templateMode, roster, keywords: inputKeywords, keywordsText = '', shareSlides = true, entryMode = 'shared', jobId, onProgress = () => {} }) {
       if (!jobId || typeof jobId !== 'string') throw new Error('생성 식별자가 필요합니다.');
       const className = classroomName(inputClass), name = classroomName(inputName);
       const students = parseRosterInput(roster.map((student) => `${student.number} ${student.name}`).join('\n'));
-      const templateId = parsePresentationId(templateUrl);
-      if (!templateId) throw new Error('올바른 Google 슬라이드 템플릿 주소를 입력해 주세요.');
+      if (templateMode && !['existing', 'blank'].includes(templateMode)) throw new Error('슬라이드 시작 방식을 확인해 주세요.');
+      const blankTemplate = templateMode === 'blank';
+      const templateId = blankTemplate ? null : parsePresentationId(templateUrl);
+      if (!blankTemplate && !templateId) throw new Error('올바른 Google 슬라이드 템플릿 주소를 입력해 주세요.');
       const keywords = classroomKeywords(inputKeywords ?? keywordsText);
       const report = (message, percent, completed = 0) => onProgress(message, { percent, completed, total: students.length });
-      report('예시 슬라이드 확인 중…', 0);
-      const template = await request('drive', `files/${encodeURIComponent(templateId)}`, { params: [['fields', 'id,mimeType,capabilities(canCopy)']] });
-      if (template.mimeType !== 'application/vnd.google-apps.presentation' || template.capabilities?.canCopy === false) throw new Error('복사할 수 있는 Google 슬라이드 템플릿을 선택해 주세요.');
+      report(blankTemplate ? '빈 슬라이드 준비 중…' : '예시 슬라이드 확인 중…', 0);
+      if (!blankTemplate) {
+        const template = await request('drive', `files/${encodeURIComponent(templateId)}`, { params: [['fields', 'id,mimeType,capabilities(canCopy)']] });
+        if (template.mimeType !== 'application/vnd.google-apps.presentation' || template.capabilities?.canCopy === false) throw new Error('복사할 수 있는 Google 슬라이드 템플릿을 선택해 주세요.');
+      }
       report('과제 저장 공간과 배부 원본 준비 중…', 5);
-      const file = await ensureFile(jobId, assignmentFileName(className, name), 'classroom-assignment-v2');
+      const file = await ensureFile(jobId, assignmentFileName(className, name), 'classroom-assignment-v2', null, blankTemplate ? { blankTemplate: 'true' } : {});
       if (!['shared', 'individual'].includes(entryMode)) throw new Error('학생 접속 방식을 확인해 주세요.');
-      const value = { className, name, templateUrl: templateId, roster: students, keywordsText: keywords.join(', '), ...(Array.isArray(inputKeywords) ? { keywords } : {}), shareSlides, entryMode };
+      const value = { className, name, templateUrl: templateId || '', ...(blankTemplate ? { templateMode: 'blank' } : {}), roster: students, keywordsText: keywords.join(', '), ...(Array.isArray(inputKeywords) ? { keywords } : {}), shareSlides, entryMode };
       await plan(file, jobId, 'classroom-assignment-v2', value, ['students', 'activity_logs']);
       // Freeze the template once so a resumed distribution uses the same basis.
-      const frozen = await ensureFile(`${jobId}:template`, `${name} · 배부 원본`, 'assignment-template-v2', templateId);
+      const frozen = await ensureFile(`${jobId}:template`, `${name} · 배부 원본`, 'assignment-template-v2', templateId, {}, 'application/vnd.google-apps.presentation');
       await assertJob(frozen.id, `${jobId}:template`, 'assignment-template-v2');
-      const baseline = adaptPresentation(await request('slides', `presentations/${encodeURIComponent(frozen.id)}`), new Date().toISOString());
+      let frozenPresentation = await request('slides', `presentations/${encodeURIComponent(frozen.id)}`);
+      if (blankTemplate && !frozenPresentation.slides?.length) {
+        try {
+          await request('slides', `presentations/${encodeURIComponent(frozen.id)}:batchUpdate`, { method: 'POST', body: { requests: [{ createSlide: { objectId: 'gbaeum_blank_slide' } }] } });
+        } catch (error) {
+          frozenPresentation = await request('slides', `presentations/${encodeURIComponent(frozen.id)}`);
+          if (!frozenPresentation.slides?.some((slide) => slide.objectId === 'gbaeum_blank_slide')) throw error;
+        }
+        frozenPresentation = await request('slides', `presentations/${encodeURIComponent(frozen.id)}`);
+      }
+      const baseline = adaptPresentation(frozenPresentation, new Date().toISOString());
+      if (blankTemplate && (baseline.slideCount !== 1 || baseline.charCount !== 0 || baseline.imageCount !== 0)) throw new Error('빈 슬라이드 한 장을 확인하지 못했습니다. 다시 시도해 주세요.');
       const oldRows = await read(file.id, "'students'!A:P");
       if (oldRows.length && JSON.stringify(oldRows[0]) !== JSON.stringify(studentHeaders)) throw new Error('새 과제의 학생 탭 형식이 달라 변경하지 않았습니다.');
       if (!oldRows.length) await write(file.id, "'students'!A1:P" + (students.length + 1), [studentHeaders, ...students.map((student) => [student.number, student.name, '', '', 'unstarted', '', 0, baseline.slideCount, 0, 0, '', 0, '', '', '', 'pending'])]);
@@ -295,8 +310,8 @@ export function createGoogleClassroom(accessToken, fetcher = globalThis.fetch) {
         catch (err) { warnings.push(`공통 학생 접속 링크: ${err.message}`); entry = { mode: 'shared', pending: true }; }
       }
       report('생성 결과 마무리 중…', 97, students.length);
-      await request('drive', `files/${encodeURIComponent(file.id)}`, { method: 'PATCH', body: { appProperties: { setupStatus: warnings.length ? 'needs-sharing' : 'ready', coverSlide: frozen.id, entryMode, ...(entry.id ? { joinSheet: entry.id } : {}) } } });
-      Object.assign(assignment, { studentEntry: entry });
+      await request('drive', `files/${encodeURIComponent(file.id)}`, { method: 'PATCH', body: { appProperties: { setupStatus: warnings.length ? 'needs-sharing' : 'ready', coverSlide: frozen.id, entryMode, ...(blankTemplate ? { blankTemplate: 'true' } : {}), ...(entry.id ? { joinSheet: entry.id } : {}) } } });
+      Object.assign(assignment, { studentEntry: entry, blankTemplate });
       report(warnings.length ? '슬라이드 생성 완료 · 공유 확인 필요' : '슬라이드와 학생 접속 안내를 준비했어요.', 100, students.length);
       return { assignment, students: savedStudents, warnings };
     },

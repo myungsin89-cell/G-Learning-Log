@@ -10,7 +10,7 @@ import { assignmentFileName, parseAssignmentFileName } from '../src/lib/assignme
 const mime = 'application/vnd.google-apps.spreadsheet';
 const deck = { slides: [{ objectId: 'page', pageElements: [{ shape: { text: { textElements: [{ textRun: { content: '기본 틀' } }] } } }, { image: {} }] }] };
 const roster = [{ number: 1, name: '김누리' }, { number: 4, name: '송명신' }];
-const assignmentInput = { className: '4학년 4반', name: '달 관찰', templateUrl: 'https://docs.google.com/presentation/d/template/edit', roster, keywordsText: '달, 위치\n달', shareSlides: true, jobId: 'assignment-job' };
+const assignmentInput = { className: '4학년 4반', name: '달 관찰', templateMode: 'existing', templateUrl: 'https://docs.google.com/presentation/d/template/edit', roster, keywordsText: '달, 위치\n달', shareSlides: true, jobId: 'assignment-job' };
 
 test('new assignment files use the 슬기록 name while both older names remain readable', () => {
   assert.equal(assignmentFileName('4학년 4반', '달 관찰'), '슬기록_과제_[4학년 4반]_[달 관찰]');
@@ -56,7 +56,8 @@ function mockGoogle() {
     if ((path === '/drive/v3/files' || path.endsWith('/copy')) && method === 'POST') {
       if (body.appProperties?.gbaeumCreation === state.failStudent) { state.failStudent = null; return response({}, 500); }
       const source = path.endsWith('/copy') ? files.get(path.split('/')[4]) : null;
-      const file = { id: `new-${++state.sequence}`, name: body.name, mimeType: source?.mimeType || body.mimeType, ownedByMe: true, permissions: [{ type: 'user', role: 'owner' }], appProperties: body.appProperties, tabs: source ? {} : { Sheet1: [] }, ...(source ? { deck: structuredClone(source.deck) } : {}) };
+      const isPresentation = (source?.mimeType || body.mimeType) === 'application/vnd.google-apps.presentation';
+      const file = { id: `new-${++state.sequence}`, name: body.name, mimeType: source?.mimeType || body.mimeType, ownedByMe: true, permissions: [{ type: 'user', role: 'owner' }], appProperties: body.appProperties, tabs: source || isPresentation ? {} : { Sheet1: [] }, ...(isPresentation ? { deck: source ? structuredClone(source.deck) : { presentationId: `new-${state.sequence}`, title: body.name, slides: [] } } : {}) };
       if (state.shareNewAssignment && body.appProperties?.gbaeumStore === 'classroom-assignment-v2') file.permissions.push({ type: 'anyone', role: 'reader' });
       if (state.shareFrozenTemplate && body.appProperties?.gbaeumStore === 'assignment-template-v2') file.permissions.push({ type: 'anyone', role: 'reader' });
       files.set(file.id, file);
@@ -77,6 +78,11 @@ function mockGoogle() {
         return response(file);
       }
       return response(state.omitInlinePermissions && method === 'GET' ? { ...file, permissions: undefined } : file);
+    }
+    const updatedSlideId = path.match(/^\/v1\/presentations\/([^/:]+):batchUpdate$/)?.[1];
+    if (updatedSlideId) {
+      for (const update of body.requests) if (update.createSlide) files.get(updatedSlideId).deck.slides.push({ objectId: update.createSlide.objectId, pageElements: [] });
+      return response({ presentationId: updatedSlideId, replies: body.requests.map(() => ({})) });
     }
     const slideId = path.match(/^\/v1\/presentations\/([^/]+)$/)?.[1];
     if (slideId) return response(files.get(slideId).deck);
@@ -159,6 +165,34 @@ test('assignment copies preserve template, exclude its baseline, save keywords, 
   await api.createAssignment(assignmentInput);
   assert.equal(state.sequence, 6); assert.equal(sheet.tabs.students[1][6], 200); assert.equal(sheet.tabs.students[1][13], '보존할 피드백');
   assert.equal(sheet.tabs.activity_logs.length, 2);
+});
+
+test('blank assignment creates one empty slide per student and resumes without adding another base slide', async () => {
+  const { fetcher, state } = mockGoogle(), api = createGoogleClassroom('test', fetcher);
+  const input = { ...assignmentInput, templateMode: 'blank', templateUrl: '', entryMode: 'individual', jobId: 'blank-job' };
+  state.failStudent = 'blank-job:4';
+  await assert.rejects(api.createAssignment(input), /Google 저장을 완료하지 못했습니다/);
+  const frozen = [...state.files.values()].find((file) => file.appProperties?.gbaeumCreation === 'blank-job:template');
+  assert.equal(frozen.mimeType, 'application/vnd.google-apps.presentation');
+  assert.deepEqual(frozen.deck.slides.map((slide) => slide.objectId), ['gbaeum_blank_slide']);
+  const created = await api.createAssignment(input);
+  assert.equal(created.assignment.blankTemplate, true);
+  assert.deepEqual(created.students.map((student) => student.number), [1, 4]);
+  assert.equal(state.calls.filter((call) => call.path.endsWith(':batchUpdate') && call.path.includes('/presentations/')).length, 1);
+  assert.deepEqual(frozen.deck.slides.map((slide) => slide.objectId), ['gbaeum_blank_slide']);
+  assert.ok(created.students.every((student) => state.files.get(student.slideId).deck.slides.length === 1));
+  const sheet = state.files.get(created.assignment.id);
+  assert.deepEqual(sheet.tabs.activity_logs[1].slice(2, 5), [0, 1, 0]);
+  const reader = createGoogleReader('test', fetcher);
+  const plan = await reader.loadCreationPlan({ ...created.assignment, creationId: input.jobId });
+  assert.equal(plan.templateMode, 'blank');
+  const before = state.sequence;
+  await api.createAssignment(plan);
+  assert.equal(state.sequence, before);
+  assert.equal(frozen.deck.slides.length, 1);
+  const listed = await reader.listAssignments(input.className);
+  assert.equal(listed[0].blankTemplate, true);
+  assert.equal(await reader.loadAssignmentCover(listed[0]), null);
 });
 
 test('creation verifies omitted file permissions through the permissions endpoint', async () => {

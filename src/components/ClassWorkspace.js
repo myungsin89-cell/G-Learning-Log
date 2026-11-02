@@ -45,6 +45,7 @@ function RosterDialog({ className, roster, error, onRetry, onClose, busy }) {
 function AssignmentCover({ assignment }) {
   const [failedUrl, setFailedUrl] = useState(null);
   const cover = assignment.cover;
+  if (assignment.blankTemplate && !assignment.slidesTrashed) return <div className={real.assignmentCover}><div className={real.coverFallback}><Image src="/google-slides.svg" width={32} height={40} alt="" /><span>빈 슬라이드로 시작</span></div></div>;
   if (cover && failedUrl !== cover.url) return <div className={real.assignmentCover}>
     <Image className={real.coverImage} src={cover.url} width={cover.width} height={cover.height} unoptimized referrerPolicy="no-referrer" alt={`${assignment.name} ${cover.source === 'student' ? '학생 슬라이드' : '예시 슬라이드'} 첫 장`} onError={() => setFailedUrl(cover.url)} />
     <span className={real.coverLabel}>{cover.source === 'student' ? '학생 슬라이드 · 첫 장' : '예시 슬라이드 · 첫 장'}</span>
@@ -79,7 +80,7 @@ function AssignmentTrashDialog({ assignment, onDelete, onClose }) {
       {assignment.slidesTrashed && <p className={real.trashNote}>학생 슬라이드는 이미 휴지통으로 옮겼습니다.</p>}
       <p className={styles.dialogDescription}>{scope === 'slides' ? '과제 카드는 남아 저장된 기록을 볼 수 있습니다. 기존 학생 접속 시트와 슬라이드 연결 정보도 남습니다.' : '과제 카드가 목록에서 사라지고 학생 접속 시트도 휴지통으로 이동합니다.'}</p>
       <p className={real.trashNote}>휴지통 이동만으로 기존 공유 링크의 접근이 즉시 차단되는 것은 아닙니다.</p>
-      <p className={real.trashNote}>처음 선택한 예시 슬라이드와 학급 명단은 유지됩니다. Google Drive 휴지통에서 각 파일을 복원할 수 있습니다.</p>
+      <p className={real.trashNote}>{assignment.blankTemplate ? '학급 명단은 유지됩니다.' : '처음 선택한 예시 슬라이드와 학급 명단은 유지됩니다.'} Google Drive 휴지통에서 각 파일을 복원할 수 있습니다.</p>
       {error && <p className={real.editError} role="alert">{error}</p>}
     </div>
     <div className={styles.dialogActions}><button className={styles.secondaryButton} onClick={close} disabled={deleting}>취소</button><button className={real.trashConfirm} onClick={confirm} disabled={deleting}>{deleting ? '휴지통으로 옮기는 중…' : scope === 'slides' ? '학생 슬라이드 휴지통으로 이동' : '과제와 기록 휴지통으로 이동'}</button></div>

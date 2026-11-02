@@ -8,6 +8,13 @@
 .context { display: flex; align-items: center; justify-content: space-between; margin-bottom: 23px; padding: 13px 15px; border-radius: 10px; background: #f1f5ed; color: #396a50; font-size: 13px; font-weight: 700; }
 .context span { color: #788578; font-size: 11px; font-weight: 450; }
 .pickerField { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px; border: 1px solid #dce6dc; border-radius: 10px; background: #f8faf7; }
+.slideSource { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.slideSource label { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid #dce6dc; border-radius: 9px; cursor: pointer; }
+.slideSource label:has(input:checked) { border-color: #6aa183; background: #f3f8f2; }
+.slideSource label input[type='radio'] { display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; margin: 2px 0 0; padding: 0; accent-color: #246b55; }
+.slideSource span { color: #264e3d; font-size: 12px; font-weight: 700; }
+.slideSource small { display: block; margin-top: 4px; color: #77847a; font-size: 11px; font-weight: 400; line-height: 1.5; }
+.blankSourceNote { margin-top: 9px; color: #617768; font-size: 11px; line-height: 1.6; }
 .pickerField button { flex: 0 0 auto; min-height: 40px; }
 .pickedFile { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pickedFile strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #294c3b; font-size: 13px; }
@@ -54,3 +61,4 @@
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .progressBar::-webkit-progress-value { transition: none; } }
 @media (max-width: 600px) { .progressBody { padding: 22px 20px 25px; } .progressAmount strong { font-size: 52px; } }
 @media (max-width: 600px) { .pickerField { align-items: stretch; flex-direction: column; } .pickerField button { width: 100%; } }
+@media (max-width: 600px) { .slideSource { grid-template-columns: 1fr; } }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import QRCode from 'qrcode';
-import { JOIN_HEADERS, parseStudentEntry, loadStudentEntry, studentEntryUrl } from '../src/lib/studentEntry.mjs';
+import { JOIN_HEADERS, parseStudentEntry, loadStudentEntry, studentEntryUrl, studentShareLinks } from '../src/lib/studentEntry.mjs';
 
 const response = (rows) => `/*O_o*/\ngoogle.visualization.Query.setResponse(${JSON.stringify({ status: 'ok', table: { cols: JOIN_HEADERS.map((label) => ({ label })), rows: rows.map((values) => ({ c: values.map((v) => ({ v })) })) } })});`;
 test('public student picker preserves real attendance numbers and builds only safe Slides destinations', () => {
@@ -31,8 +31,16 @@ test('student access requests a fresh public title each time it reloads', async 
   assert.notEqual(urls[0].searchParams.get('tqx'), urls[1].searchParams.get('tqx'));
 });
 test('student link and downloadable QR encode the exact deployed destination', async () => {
-  const link = studentEntryUrl('https://example-school.vercel.app', 'public-picker');
-  assert.equal(link, 'https://example-school.vercel.app/join/public-picker');
+  const { link, fallbackLink } = studentShareLinks('https://seulgirok.chorok.app', 'public-picker');
+  assert.equal(link, 'https://g-learning-log-next.vercel.app/join/public-picker');
+  assert.equal(fallbackLink, 'https://seulgirok.chorok.app/join/public-picker');
+  for (const origin of ['https://g-learning-log-next.vercel.app', 'https://baeumlog.chorok.app']) {
+    assert.deepEqual(studentShareLinks(origin, 'public-picker'), { link, fallbackLink });
+  }
+  assert.deepEqual(studentShareLinks('http://localhost:3000', 'public-picker'), { link: 'http://localhost:3000/join/public-picker', fallbackLink: '' });
+  assert.deepEqual(studentShareLinks('https://seulgirok.chorok.app', undefined, true), { link: 'https://seulgirok.chorok.app/design-preview/student', fallbackLink: '' });
+  assert.deepEqual(studentShareLinks('https://seulgirok.chorok.app', undefined), { link: '', fallbackLink: '' });
+  assert.equal(studentEntryUrl('https://example-school.vercel.app', 'public-picker'), 'https://example-school.vercel.app/join/public-picker');
   const qr = QRCode.create(link, { errorCorrectionLevel: 'M' });
   assert.equal(qr.segments.map((segment) => typeof segment.data === 'string' ? segment.data : new TextDecoder().decode(segment.data)).join(''), link);
   assert.match(await QRCode.toDataURL(link, { width: 1000, margin: 4 }), /^data:image\/png;base64,/);

@@ -1,12 +1,25 @@
 import { parsePresentationId } from './slideContents.mjs';
 
 export const JOIN_HEADERS = ['student_number', 'student_name', 'slide_id', 'class_name', 'assignment_name'];
+const PRIMARY_STUDENT_ORIGIN = 'https://g-learning-log-next.vercel.app';
+const FALLBACK_STUDENT_ORIGIN = 'https://seulgirok.chorok.app';
+const SHARE_ORIGINS = new Set([PRIMARY_STUDENT_ORIGIN, FALLBACK_STUDENT_ORIGIN, 'https://baeumlog.chorok.app']);
 let queryRequestId = 0;
 export function studentEntryUrl(origin, id) {
   if (!/^[\w-]+$/.test(id || '')) throw new Error('학생 접속 링크가 아직 준비되지 않았습니다.');
   const url = new URL(`/join/${encodeURIComponent(id)}`, origin);
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('접속 주소를 확인해 주세요.');
   return url.href;
+}
+export function studentShareLinks(origin, id, preview = false) {
+  if (!origin) return { link: '', fallbackLink: '' };
+  if (preview) return { link: `${origin}/design-preview/student`, fallbackLink: '' };
+  if (!id) return { link: '', fallbackLink: '' };
+  const shared = SHARE_ORIGINS.has(origin);
+  return {
+    link: studentEntryUrl(shared ? PRIMARY_STUDENT_ORIGIN : origin, id),
+    fallbackLink: shared ? studentEntryUrl(FALLBACK_STUDENT_ORIGIN, id) : '',
+  };
 }
 export function parseStudentEntry(text) {
   const start = text.indexOf('{'), end = text.lastIndexOf('}');

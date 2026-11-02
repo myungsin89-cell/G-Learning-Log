@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import QRCode from 'qrcode';
 import Image from 'next/image';
-import { studentEntryUrl } from '@/lib/studentEntry.mjs';
+import { studentShareLinks } from '@/lib/studentEntry.mjs';
 import { studentLabel } from '@/lib/workRecords.mjs';
 import { studentKey } from '@/lib/storedWorkRecords.mjs';
 import styles from './StudentAccess.module.css';
@@ -11,9 +11,6 @@ import styles from './StudentAccess.module.css';
 const subscribeOrigin = () => () => {};
 const currentOrigin = () => window.location.origin;
 const serverOrigin = () => '';
-const SEULGIROK_ORIGIN = 'https://seulgirok.chorok.app';
-const LEGACY_ORIGIN = 'https://baeumlog.chorok.app';
-const VERCEL_ORIGIN = 'https://g-learning-log-next.vercel.app';
 
 export default function StudentAccess({ className, assignment, students, entry, onConfigure, onClose, preview = false }) {
   const dialog = useRef(null), inFlight = useRef(false), titleId = useId();
@@ -24,10 +21,7 @@ export default function StudentAccess({ className, assignment, students, entry, 
   const activeEntry = updated || entry, mode = choice || activeEntry?.mode || 'shared';
   const linkedStudents = students.filter((student) => student.slideUrl);
   const origin = useSyncExternalStore(subscribeOrigin, currentOrigin, serverOrigin);
-  const hasShareDomains = !preview && [SEULGIROK_ORIGIN, LEGACY_ORIGIN, VERCEL_ORIGIN].includes(origin);
-  const linkOrigin = hasShareDomains ? SEULGIROK_ORIGIN : origin;
-  const link = !origin ? '' : preview ? `${origin}/design-preview/student` : activeEntry?.id ? studentEntryUrl(linkOrigin, activeEntry.id) : '';
-  const fallbackLink = hasShareDomains && activeEntry?.id ? studentEntryUrl(VERCEL_ORIGIN, activeEntry.id) : '';
+  const { link, fallbackLink } = studentShareLinks(origin, activeEntry?.id, preview);
   const qrUrl = qr?.link === link ? qr.url : '';
   const individualQrUrl = individualQr?.link === selectedQr?.link ? individualQr?.url : '';
   const local = link && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(link).hostname);

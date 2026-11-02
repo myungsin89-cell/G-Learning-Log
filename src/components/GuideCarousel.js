@@ -7,7 +7,7 @@ import BrandMark from './BrandMark';
 import styles from './GuideCarousel.module.css';
 
 const cards = [
-  { label: '시작', title: '첫 슬라이드 수업,\n이 순서대로 시작해요.', body: '학급을 만들고 과제를 배부한 뒤, 수업 중의 변화를 살펴보고 필요한 학생에게 피드백을 전합니다.', visual: 'cover' },
+  { label: '시작', title: '첫 슬라이드 수업,\n이 순서대로 시작해요.', body: '학급과 과제를 만들고 학생에게 슬라이드를 배부합니다. 수업 중 작업을 살펴보고 필요한 학생에게 피드백을 전해요.', visual: 'cover' },
   { label: '01 · 연결', title: '선생님의 Google 계정으로 연결해요.', body: '학급 명단과 수업 기록은 선생님의 Google Drive에 저장됩니다. 출석번호가 있는 명단을 준비해 주세요. 예시 슬라이드는 없어도 됩니다.', points: ['Google 계정으로 계속하기를 누르세요.', '학생 접속 화면에는 별도 로그인이 없어요. Google 슬라이드는 학교 계정으로 열어요.'], shots: [{ src: 'home', caption: '메인 화면 · Google 계정으로 계속하기', alt: '메인 화면의 Google 계정으로 계속하기 버튼', x: 78, y: 52 }] },
   { label: '02 · 학급', title: '우리 반과 학생 명단을 등록해요.', body: '첫 학급 등록하기에서 학급 이름을 적고, 학생을 한 줄에 한 명씩 입력합니다. 번호와 이름 또는 가명을 함께 넣어 주세요.', points: ['학급 목록에서 첫 학급 등록하기를 누르세요.', '예: 1 김누리, 4 송명신'], shots: [{ src: 'first-class', caption: '① 학급 목록에서 시작', alt: '첫 학급 등록하기 버튼이 있는 학급 목록', x: 50, y: 64 }, { src: 'create-class', caption: '② 학급 이름과 명단 입력', alt: '학급 이름과 학생 명단을 입력하는 창', x: 51, y: 54 }] },
   { label: '03 · 과제', title: '예시 또는 빈 슬라이드로 배부해요.', body: '새 과제 만들기에서 제목을 입력하고 예시 슬라이드 사용 또는 빈 슬라이드로 시작을 고릅니다. 키워드는 선택 사항이며 나중에도 바꿀 수 있습니다.', points: ['새 과제 만들기를 누르세요.', '배부할 학생과 접속 방식을 확인한 뒤 생성하세요.'], shots: [{ src: 'classroom', caption: '① 학급 화면에서 새 과제 만들기', alt: '학급 과제 목록 오른쪽의 새 과제 만들기 버튼', x: 88, y: 36 }, { src: 'create-assignment', caption: '② 빈 슬라이드로 시작 선택', alt: '예시 슬라이드 사용과 빈 슬라이드로 시작 중 선택하는 창', x: 52, y: 37 }] },
@@ -16,7 +16,7 @@ const cards = [
   { label: '06 · 먼저 보기', title: '먼저 살펴볼 학생을 찾아요.', body: '답변을 기다리는 댓글, 텍스트 급증, 변화가 없는 학생을 한 화면에서 확인합니다. 텍스트 급증은 확인할 신호이며 복사·붙여넣기의 확정 판정은 아닙니다.', points: ['왼쪽의 먼저 살펴볼 학생을 확인하세요.', '학생 카드를 누르면 자세한 기록을 볼 수 있어요.'], shots: [{ src: 'dashboard', caption: '작업 현황 · 먼저 살펴볼 학생', alt: '먼저 살펴볼 학생과 학생별 작업 카드가 있는 대시보드', x: 14, y: 57 }] },
   { label: '07 · 작업 기록', title: '변화의 흐름을 읽어 보세요.', body: '학생 카드를 열면 확인 시각별 작업 기록과 글자·이미지·슬라이드 변화를 볼 수 있습니다. 그래프는 슬.기록이 확인한 시점 사이의 변화입니다.', points: ['학생 카드를 눌러 오른쪽 작업 기록을 여세요.', '그래프와 확인 시각을 함께 살펴보세요.'], visual: 'record' },
   { label: '08 · 피드백', title: '댓글을 보고 필요한 답을 전해요.', body: '학생의 슬라이드 댓글을 확인하고 답글을 남길 수 있습니다. 답이 필요 없는 댓글은 답글 없이 확인 완료로 정리할 수 있어요.', points: ['답변 대기 표시가 있는 학생을 여세요.', '답글 남기기 또는 답글 없이 확인 완료를 선택하세요.'], visual: 'feedback' },
-  { label: '완료', title: '이제 우리 반 수업을 열어 보세요.', body: '학급 → 과제 → 학생 접속 → 모니터링 → 기록 확인 → 피드백. 첫 수업에서는 이 순서만 기억하면 됩니다.', visual: 'finish' },
+  { label: '완료', title: '이제 우리 반 수업을 열어 보세요.', body: '학급 생성, 과제 생성, 학생 배부, 교사 모니터링, 피드백. 첫 수업에서는 이 순서만 기억하면 됩니다.', visual: 'finish' },
 ];
 
 function Shot({ shot }) {
@@ -31,13 +31,13 @@ function Shot({ shot }) {
         </svg>
       </span>
     </a>
-    <figcaption>{shot.caption}<span>크게 보기 ↗</span></figcaption>
+    <figcaption>{shot.caption}<span>크게 보기</span></figcaption>
   </figure>;
 }
 
 function CoverVisual({ finish = false }) {
   if (finish) return <div className={styles.finishVisual}><span>✓</span><strong>첫 수업 준비 완료</strong><p>필요할 때 언제든 이 가이드를 다시 볼 수 있어요.</p></div>;
-  return <div className={styles.coverVisual}><div className={styles.coverMark}><BrandMark size={62} /><strong>슬.기록</strong></div><div className={styles.flow}>{['학급', '과제', '학생 접속', '모니터링', '피드백'].map((item, index) => <div key={item}><small>{String(index + 1).padStart(2, '0')}</small><strong>{item}</strong></div>)}</div><p>슬라이드의 기록을, 슬기롭게 읽다.</p></div>;
+  return <div className={styles.coverVisual}><div className={styles.coverMark}><BrandMark size={62} /><strong>슬.기록</strong></div><div className={styles.flow}>{['학급 생성', '과제 생성', '학생 배부', '교사 모니터링', '피드백'].map((item, index) => <div key={item}><small>{String(index + 1).padStart(2, '0')}</small><strong>{item}</strong></div>)}</div><p>슬라이드의 기록을, 슬기롭게 읽다.</p></div>;
 }
 
 function MonitorVisual() {
@@ -90,10 +90,10 @@ export default function GuideCarousel({ initialStep = 0 }) {
       <div className={styles.progressMeta}><span>{card.label}</span><span>{index + 1} / {cards.length}</span></div>
       <div className={styles.progress} aria-label={`가이드 ${cards.length}장 중 ${index + 1}장`}><span style={{ width: `${((index + 1) / cards.length) * 100}%` }} /></div>
       <section className={styles.card} aria-live="polite" aria-labelledby="guide-title" key={index}>
-        <div className={styles.copy}><span className={styles.kicker}>슬.기록 시작 가이드</span><h1 id="guide-title">{card.title}</h1><p className={styles.body}>{card.body}</p>{card.points && <ul className={styles.points}>{card.points.map((point) => <li key={point}>{point}</li>)}</ul>}{last && <Link href="/" className={styles.startLink}>슬.기록 시작하기 <span aria-hidden="true">↗</span></Link>}</div>
+        <div className={styles.copy}><span className={styles.kicker}>슬.기록 시작 가이드</span><h1 id="guide-title">{card.title}</h1><p className={styles.body}>{card.body}</p>{card.points && <ul className={styles.points}>{card.points.map((point) => <li key={point}>{point}</li>)}</ul>}{last && <Link href="/" className={styles.startLink}>슬.기록 시작하기</Link>}</div>
         <div className={styles.visual}><Visual card={card} /></div>
       </section>
-      <nav className={styles.navigation} aria-label="가이드 페이지"><button type="button" onClick={() => go(index - 1)} disabled={index === 0}>← 이전</button><div className={styles.dots}>{cards.map((item, itemIndex) => <button key={item.label} type="button" aria-label={`${itemIndex + 1}장: ${item.label}`} aria-current={itemIndex === index ? 'step' : undefined} className={itemIndex === index ? styles.activeDot : ''} onClick={() => go(itemIndex)} />)}</div>{last ? <Link href="/" className={styles.next}>시작하기 ↗</Link> : <button type="button" className={styles.next} onClick={() => go(index + 1)}>다음 →</button>}</nav>
+      <nav className={styles.navigation} aria-label="가이드 페이지"><button type="button" onClick={() => go(index - 1)} disabled={index === 0}>이전</button><div className={styles.dots}>{cards.map((item, itemIndex) => <button key={item.label} type="button" aria-label={`${itemIndex + 1}장: ${item.label}`} aria-current={itemIndex === index ? 'step' : undefined} className={itemIndex === index ? styles.activeDot : ''} onClick={() => go(itemIndex)} />)}</div>{last ? <Link href="/" className={styles.next}>시작하기</Link> : <button type="button" className={styles.next} onClick={() => go(index + 1)}>다음</button>}</nav>
     </div>
   </main>;
 }

@@ -24,7 +24,7 @@ function Shot({ shot }) {
   return <figure className={styles.shot}>
     <a href={src} target="_blank" rel="noopener noreferrer" aria-label={`${shot.caption} 화면 크게 보기 (새 탭)`}>
       <Image src={src} width={1440} height={900} alt={shot.alt} loading="eager" unoptimized />
-      <span className={styles.marker} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} aria-hidden="true">+</span>
+      <span className={styles.marker} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} aria-hidden="true" />
     </a>
     <figcaption>{shot.caption}<span>크게 보기 ↗</span></figcaption>
   </figure>;

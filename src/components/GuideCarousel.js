@@ -19,10 +19,10 @@ const cards = [
   { label: '완료', title: '이제 우리 반 수업을 열어 보세요.', body: '학급 생성, 과제 생성, 학생 배부, 교사 모니터링, 피드백. 첫 수업에서는 이 순서만 기억하면 됩니다.', visual: 'finish' },
 ];
 
-function Shot({ shot }) {
+function Shot({ shot, onOpen }) {
   const src = `/guide/${shot.src}.png`;
   return <figure className={styles.shot}>
-    <a href={src} target="_blank" rel="noopener noreferrer" aria-label={`${shot.caption} 화면 크게 보기 (새 탭)`}>
+    <button type="button" onClick={(event) => onOpen(shot, event.currentTarget)} aria-label={`${shot.caption} 화면 크게 보기`}>
       <Image src={src} width={1440} height={900} alt={shot.alt} loading="eager" unoptimized />
       <span className={styles.marker} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} aria-hidden="true">
         <svg viewBox="0 0 28 34" fill="none" focusable="false">
@@ -30,7 +30,7 @@ function Shot({ shot }) {
           <path d="M3.5 2.5v23.8l6.6-5.9L15.6 31l4.5-2.3-5.4-10.2H24L3.5 2.5Z" stroke="#285644" strokeWidth="1.5" strokeLinejoin="round" />
         </svg>
       </span>
-    </a>
+    </button>
     <figcaption>{shot.caption}<span>크게 보기</span></figcaption>
   </figure>;
 }
@@ -59,24 +59,34 @@ function DetailVisual({ feedback = false }) {
   </div>;
 }
 
-function Visual({ card }) {
+function Visual({ card, onOpenShot }) {
   if (card.visual === 'cover') return <CoverVisual />;
   if (card.visual === 'finish') return <CoverVisual finish />;
   if (card.visual === 'monitor') return <MonitorVisual />;
   if (card.visual === 'record') return <DetailVisual />;
   if (card.visual === 'feedback') return <DetailVisual feedback />;
-  return <div className={`${styles.shots} ${card.shots.length > 1 ? styles.twoShots : ''}`}>{card.shots.map((shot) => <Shot key={shot.src} shot={shot} />)}<p className={styles.exampleNote}>개인정보가 없는 설명용 예시 화면입니다. 화면을 누르면 크게 볼 수 있어요.</p></div>;
+  return <div className={`${styles.shots} ${card.shots.length > 1 ? styles.twoShots : ''}`}>{card.shots.map((shot) => <Shot key={shot.src} shot={shot} onOpen={onOpenShot} />)}<p className={styles.exampleNote}>개인정보가 없는 설명용 예시 화면입니다. 화면을 누르면 크게 볼 수 있어요.</p></div>;
 }
 
 export default function GuideCarousel({ initialStep = 0 }) {
   const [index, setIndex] = useState(() => Math.min(cards.length - 1, initialStep));
+  const [selectedShot, setSelectedShot] = useState(null);
+  const [expanded, setExpanded] = useState(false);
   const touchX = useRef(null);
+  const imageDialog = useRef(null);
+  const shotTrigger = useRef(null);
   const card = cards[index];
   const last = index === cards.length - 1;
   const go = (next) => setIndex(Math.max(0, Math.min(cards.length - 1, next)));
+  const openShot = (shot, trigger) => { shotTrigger.current = trigger; setExpanded(false); setSelectedShot(shot); };
+
+  useEffect(() => {
+    if (selectedShot && imageDialog.current && !imageDialog.current.open) imageDialog.current.showModal();
+  }, [selectedShot]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
+      if (imageDialog.current?.open) return;
       if (event.key === 'ArrowRight') setIndex((current) => Math.min(cards.length - 1, current + 1));
       if (event.key === 'ArrowLeft') setIndex((current) => Math.max(0, current - 1));
     };
@@ -84,16 +94,20 @@ export default function GuideCarousel({ initialStep = 0 }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  return <main className={styles.page} onTouchStart={(event) => { touchX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { if (touchX.current === null) return; const distance = event.changedTouches[0].clientX - touchX.current; touchX.current = null; if (Math.abs(distance) < 65) return; event.preventDefault(); go(index + (distance < 0 ? 1 : -1)); }}>
+  return <main className={styles.page} onTouchStart={(event) => { if (imageDialog.current?.open) return; touchX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { if (imageDialog.current?.open || touchX.current === null) return; const distance = event.changedTouches[0].clientX - touchX.current; touchX.current = null; if (Math.abs(distance) < 65) return; event.preventDefault(); go(index + (distance < 0 ? 1 : -1)); }}>
     <div className={styles.shell}>
       <header className={styles.header}><Link href="/" className={styles.brand}><BrandMark size={35} /><span>슬.기록</span></Link><span className={styles.headerTitle}>시작 가이드</span><Link href="/" className={styles.close}>가이드 닫기 ×</Link></header>
       <div className={styles.progressMeta}><span>{card.label}</span><span>{index + 1} / {cards.length}</span></div>
       <div className={styles.progress} aria-label={`가이드 ${cards.length}장 중 ${index + 1}장`}><span style={{ width: `${((index + 1) / cards.length) * 100}%` }} /></div>
       <section className={styles.card} aria-live="polite" aria-labelledby="guide-title" key={index}>
         <div className={styles.copy}><span className={styles.kicker}>슬.기록 시작 가이드</span><h1 id="guide-title">{card.title}</h1><p className={styles.body}>{card.body}</p>{card.points && <ul className={styles.points}>{card.points.map((point) => <li key={point}>{point}</li>)}</ul>}{last && <Link href="/" className={styles.startLink}>슬.기록 시작하기</Link>}</div>
-        <div className={styles.visual}><Visual card={card} /></div>
+        <div className={styles.visual}><Visual card={card} onOpenShot={openShot} /></div>
       </section>
       <nav className={styles.navigation} aria-label="가이드 페이지"><button type="button" onClick={() => go(index - 1)} disabled={index === 0}>이전</button><div className={styles.dots}>{cards.map((item, itemIndex) => <button key={item.label} type="button" aria-label={`${itemIndex + 1}장: ${item.label}`} aria-current={itemIndex === index ? 'step' : undefined} className={itemIndex === index ? styles.activeDot : ''} onClick={() => go(itemIndex)} />)}</div>{last ? <Link href="/" className={styles.next}>시작하기</Link> : <button type="button" className={styles.next} onClick={() => go(index + 1)}>다음</button>}</nav>
     </div>
+    {selectedShot && <dialog ref={imageDialog} className={styles.imageDialog} aria-labelledby="guide-image-title" onClose={() => { setSelectedShot(null); setExpanded(false); shotTrigger.current?.focus(); }} onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
+      <div className={styles.imageDialogHeader}><strong id="guide-image-title">{selectedShot.caption}</strong><button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? '전체 보기' : '확대 보기'}</button><button type="button" onClick={() => imageDialog.current?.close()}>닫기</button></div>
+      <div className={`${styles.imageDialogBody} ${expanded ? styles.imageExpanded : ''}`}><Image src={`/guide/${selectedShot.src}.png`} width={1440} height={900} alt={selectedShot.alt} loading="eager" unoptimized /></div>
+    </dialog>}
   </main>;
 }

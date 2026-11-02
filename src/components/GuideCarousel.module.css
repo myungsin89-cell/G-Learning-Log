@@ -20,8 +20,8 @@
 .shots { display: grid; gap: 13px; }
 .twoShots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .shot { min-width: 0; }
-.shot a { position: relative; display: block; overflow: hidden; border: 1px solid #dce5dc; border-radius: 14px; background: #f5f7f4; box-shadow: 0 8px 24px #20342b12; }
-.shot a:hover { border-color: #71a788; }
+.shot button { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; border: 1px solid #dce5dc; border-radius: 14px; background: #f5f7f4; box-shadow: 0 8px 24px #20342b12; cursor: zoom-in; }
+.shot button:hover { border-color: #71a788; }
 .shot img { display: block; width: 100%; height: auto; }
 .marker { position: absolute; width: 28px; height: 34px; transform: translate(-3px, -3px); pointer-events: none; filter: drop-shadow(0 1px 2px #20342b38); }
 .marker svg { display: block; width: 100%; height: 100%; }
@@ -86,7 +86,18 @@
 .dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #cad9cb; cursor: pointer; }
 .dots .activeDot { width: 24px; border-radius: 99px; background: #246b55; }
+.imageDialog { width: min(1200px, calc(100vw - 32px)); max-width: none; max-height: calc(100svh - 32px); margin: auto; padding: 0; overflow: hidden; border: 1px solid #dce5dc; border-radius: 16px; background: #fff; color: #20342b; box-shadow: 0 24px 80px #12261c55; }
+.imageDialog[open] { display: flex; flex-direction: column; }
+.imageDialog::backdrop { background: #10251ac4; }
+.imageDialogHeader { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-bottom: 1px solid #e1e9df; }
+.imageDialogHeader strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.imageDialogHeader button { padding: 8px 12px; border: 1px solid #d4e1d5; border-radius: 8px; background: #fff; color: #315f47; font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.imageDialogHeader button:hover { background: #edf5ee; }
+.imageDialogBody { min-height: 0; overflow: auto; background: #f5f8f4; }
+.imageDialogBody img { display: block; width: 100%; height: auto; }
+.imageExpanded img { width: 1440px; max-width: none; }
 .page a:focus-visible, .page button:focus-visible { outline: 3px solid #e2ae32; outline-offset: 3px; }
 @media (max-width: 980px) { .card { grid-template-columns: 1fr; align-items: start; min-height: 0; padding: 30px; } .copy h1, .body { max-width: none; } .points { margin-top: 20px; } .visual { align-self: start; } }
 @media (max-width: 600px) { .shell { padding: 17px 14px 22px; } .header { padding-bottom: 15px; } .brand { font-size: 18px; } .headerTitle { display: none; } .close { font-size: 12px; } .card { gap: 23px; margin-top: 16px; padding: 23px 18px; border-radius: 17px; } .copy h1 { font-size: 31px; } .body { margin-top: 16px; font-size: 14px; } .points { font-size: 12px; } .twoShots { grid-template-columns: 1fr; } .shot figcaption { font-size: 11px; } .marker { width: 25px; height: 30px; } .coverVisual, .finishVisual { min-height: 360px; padding: 24px; } .coverMark { font-size: 27px; } .flow { grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 35px; } .flow > div { min-height: 70px; padding: 10px 5px; } .flow > div::after { display: none; } .flow strong { font-size: 11px; } .coverVisual > p { margin-top: 25px; font-size: 13px; } .mockMonitor, .mockDetail { min-height: 330px; } .mockSummary { padding: 8px; } .mockSummary span { font-size: 8px; } .mockSummary strong { font-size: 14px; } .mockContent { grid-template-columns: 1fr; padding: 10px; } .mockContent aside { display: none; } .mockCards > i { height: 160px; } .mockOverlay strong { font-size: 12px; } .mockDetail { height: 350px; } .mockDrawer { width: 78%; padding: 11px; } .mockDrawerHeader { font-size: 12px; } .mockSection { margin: 12px 0 9px; font-size: 10px; } .mockChart { height: 160px; padding: 10px; } .mockChart > div { height: 112px; } .mockChart small { font-size: 7px; } .mockRows span { font-size: 8px; } .mockComment { padding: 10px; } .mockComment p { font-size: 10px; } .navigation { gap: 8px; } .navigation > button:first-child, .navigation .next { min-width: 77px; padding: 9px 8px; font-size: 12px; } .dots { gap: 5px; } .dots button { width: 6px; height: 6px; } .dots .activeDot { width: 15px; } }
 @media (prefers-reduced-motion: reduce) { .progress > span { transition: none; } }
+@media (max-width: 600px) { .imageDialog { width: calc(100vw - 16px); max-height: calc(100svh - 16px); } .imageDialogHeader { padding: 10px; } .imageDialogHeader strong { font-size: 12px; } .imageDialogHeader button { padding: 7px 8px; font-size: 11px; } .imageExpanded img { width: 960px; } }

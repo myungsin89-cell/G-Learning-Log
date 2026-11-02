@@ -28,9 +28,9 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
     <main className={styles.page}>
       <div className={styles.canvas}>
         <header className={styles.header}>
-          <div className={styles.brand} aria-label="슬기록">
+          <div className={styles.brand} aria-label="슬.기록">
             <BrandMark size={42} />
-            <span>슬기록</span>
+            <span>슬.기록</span>
           </div>
           <span className={styles.headerNote}>학생의 작업 과정을 살피는 도구</span>
         </header>
@@ -39,8 +39,8 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
           <section className={styles.story} aria-labelledby="hero-title">
             <div className={styles.eyebrow}><span className={styles.eyebrowLine} /> 결과보다 과정을 봅니다</div>
             <h1 id="hero-title" className={styles.headline}>
-              슬라이드에 남은 작은 변화,<br />
-              <span>배움의 과정이 됩니다.</span>
+              슬라이드의 기록을,<br />
+              <span>슬기롭게 읽다.</span>
             </h1>
             <p className={styles.description}>
               구글 슬라이드로 수업할 때, 학생마다 다른 진행 상황을 살피고 필요한 도움을 제때 전할 수 있습니다.

@@ -15,14 +15,6 @@ function GoogleMark() {
   );
 }
 
-function ArrowIcon() {
-  return (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export default function EntryScreen({ onLogin, preview = false, loading = false, children }) {
   return (
     <main className={styles.page}>
@@ -62,12 +54,11 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
             >
               <GoogleMark />
               <span aria-live="polite">{loading ? 'Google 연결 준비 중...' : 'Google 계정으로 계속하기'}</span>
-              <ArrowIcon />
             </button>
 
             {children}
 
-            <Link href="/guide" className={styles.guideLink}>처음이신가요? 2분 시작 가이드 보기 <span aria-hidden="true">↗</span></Link>
+            <Link href="/guide" className={styles.guideLink}><span>처음 사용하시나요?</span><strong>2분 시작 가이드 보기</strong></Link>
 
             <div className={styles.supported}>
               선택한 파일과 슬기록이 만든 자료만 연결합니다.

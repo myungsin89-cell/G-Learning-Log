@@ -241,6 +241,10 @@
   margin-left: auto;
 }
 
+.guideLink { display: block; margin-top: 18px; color: #246b55; font-size: 13px; font-weight: 720; text-align: center; text-decoration: none; }
+.guideLink:hover { text-decoration: underline; }
+.guideLink:focus-visible { outline: 3px solid #a4ceb0; outline-offset: 3px; }
+
 .googleButton:focus-visible {
   outline: 3px solid #9cccaa;
   outline-offset: 3px;

@@ -67,6 +67,8 @@ export default function EntryScreen({ onLogin, preview = false, loading = false,
 
             {children}
 
+            <Link href="/guide" className={styles.guideLink}>처음이신가요? 2분 시작 가이드 보기 <span aria-hidden="true">↗</span></Link>
+
             <div className={styles.supported}>
               선택한 파일과 슬기록이 만든 자료만 연결합니다.
             </div>

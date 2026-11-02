@@ -14,6 +14,7 @@ export function ClassSelectionHeader({ onLogout, preview = false, displayName, o
         </div>
         <div className={styles.headerActions}>
           <span className={styles.headerLabel}>{displayName ? `${displayName} 선생님` : '내 학급'}</span>
+          <Link href="/guide" className={styles.guideLink}>시작 가이드</Link>
           {onReconnect && <button type="button" className={styles.logout} onClick={onReconnect} disabled={loading}>다시 로그인</button>}
           {!preview && (
             <button type="button" className={styles.logout} onClick={onLogout} disabled={loading}>

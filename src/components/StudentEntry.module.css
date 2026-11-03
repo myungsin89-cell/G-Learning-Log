@@ -7,6 +7,9 @@
 .heading > span { display: block; margin-top: 15px; color: #708074; font-size: 15px; }
 .search { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border: 1px solid #dfe7de; border-radius: 11px; background: #fff; margin-bottom: 22px; color: #708074; }
 .search input { width: 100%; outline: 0; border: 0; font: inherit; font-size: 14px; color: #20342b; }
+.resultCount { margin: -8px 0 16px; color: #708074; font-size: 13px; }
+.refreshWarning { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 13px 16px; border: 1px solid #e7d9ad; border-radius: 10px; background: #fffaf0; color: #675725; font-size: 13px; }
+.refreshWarning button { flex: none; padding: 7px 10px; border: 1px solid #d8c992; border-radius: 7px; background: #fff; color: inherit; font: inherit; cursor: pointer; }
 .grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; }
 .grid > button { display: flex; align-items: center; gap: 13px; padding: 22px 18px; border: 1px solid #e1e9e1; border-radius: 13px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .grid > button:hover { border-color: #8eb99b; background: #f1f7ee; }
